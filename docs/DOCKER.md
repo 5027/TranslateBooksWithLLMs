@@ -15,8 +15,8 @@ docker pull ghcr.io/hydropix/translatebookswithllms:latest
 ```bash
 docker run -d \
   -p 5000:5000 \
-  -v $(pwd)/translated_files:/app/translated_files \
-  -v $(pwd)/logs:/app/logs \
+  -v ~/TranslateBooks:/app/TranslateBooks \
+  -e OUTPUT_DIR=/app/TranslateBooks \
   -e API_ENDPOINT=http://host.docker.internal:11434/api/generate \
   -e DEFAULT_MODEL=qwen3:14b \
   ghcr.io/hydropix/translatebookswithllms:latest
@@ -136,9 +136,8 @@ Docker automatically pulls the correct architecture for your system.
 ### Recommended Volumes
 
 ```bash
--v /path/to/translated_files:/app/translated_files  # Output files
--v /path/to/logs:/app/logs                         # Application logs
--v /path/to/data:/app/data                         # Uploads and temp data
+-v ~/TranslateBooks:/app/TranslateBooks  # All user data: uploads, results, checkpoints, logs
+-e OUTPUT_DIR=/app/TranslateBooks
 ```
 
 ### Permissions

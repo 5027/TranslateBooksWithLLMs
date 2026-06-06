@@ -161,11 +161,6 @@ if not exist ".env" (
     echo     [OK] .env configuration exists
 )
 
-if not exist "translated_files" (
-    mkdir translated_files
-    echo     [OK] Created output directory: translated_files
-)
-
 REM Quick Integrity Check (Silent)
 if exist "fix_installation.py" (
     python fix_installation.py >nul 2>&1

@@ -178,7 +178,8 @@ def interactive_env_setup():
             f.write("\n# Server Configuration\n")
             f.write(f"PORT={config['PORT']}\n")
             f.write("HOST=127.0.0.1\n")
-            f.write("OUTPUT_DIR=translated_files\n")
+            f.write("# Base directory for all translation data (uploads, results, checkpoints)\n")
+            f.write("OUTPUT_DIR=~/TranslateBooks\n")
 
             f.write("\n# LLM Provider Settings\n")
             f.write(f"LLM_PROVIDER={config['LLM_PROVIDER']}\n")

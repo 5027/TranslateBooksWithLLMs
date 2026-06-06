@@ -199,7 +199,8 @@ MAX_TOKENS_PER_CHUNK=450  # Token-based chunking (default: 450 tokens)
 
 ```bash
 docker build -t translatebook .
-docker run -p 5000:5000 -v $(pwd)/translated_files:/app/translated_files translatebook
+# Map the external data directory to the container
+docker run -p 5000:5000 -v ~/TranslateBooks:/app/TranslateBooks -e OUTPUT_DIR=/app/TranslateBooks translatebook
 ```
 
 See [docs/DOCKER.md](docs/DOCKER.md) for more options.

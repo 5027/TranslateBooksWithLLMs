@@ -22,10 +22,6 @@ def setup_working_directory():
         # Change working directory to app data folder
         os.chdir(app_data_dir)
 
-        # Create necessary subdirectories
-        (app_data_dir / 'translated_files').mkdir(exist_ok=True)
-        (app_data_dir / 'checkpoints').mkdir(exist_ok=True)
-
         # Copy .env.example if it doesn't exist and is bundled
         bundle_dir = Path(sys._MEIPASS)
         env_example_path = app_data_dir / '.env.example'
@@ -65,7 +61,8 @@ OLLAMA_NUM_CTX=4096
 # === SERVER CONFIGURATION ===
 PORT=5000
 HOST=127.0.0.1
-OUTPUT_DIR=translated_files
+# Base directory for all translation data (uploads, results, checkpoints)
+OUTPUT_DIR=~/TranslateBooks
 
 # === OPTIONAL: CLOUD PROVIDERS ===
 # Uncomment and add your API keys if using cloud providers
@@ -84,7 +81,6 @@ MAX_TOKENS_PER_CHUNK=400
             print()
 
         print(f"[INFO] Working directory: {app_data_dir}")
-        print(f"[INFO] Translated files will be saved to: {app_data_dir / 'translated_files'}")
         print()
 
     else:

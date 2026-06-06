@@ -342,7 +342,9 @@ HOST = os.getenv('HOST', '127.0.0.1')
 # anchors to the cwd at config-load time, which matches the previous behavior
 # (os.makedirs was already cwd-relative). The PyInstaller launcher chdir's to its
 # data folder before this module is imported, so .exe behavior is preserved.
-OUTPUT_DIR = str(Path(os.getenv('OUTPUT_DIR', 'translated_files')).expanduser().resolve())
+# Default moved to user home directory to keep project folder clean.
+_default_output_dir = str(Path.home() / 'TranslateBooks')
+OUTPUT_DIR = str(Path(os.getenv('OUTPUT_DIR', _default_output_dir)).expanduser().resolve())
 
 # Output filename pattern
 # Placeholders: {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}

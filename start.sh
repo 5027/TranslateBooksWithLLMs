@@ -161,13 +161,6 @@ else
     echo "[OK] .env configuration exists"
 fi
 
-# Create output directory
-if [ ! -d "translated_files" ]; then
-    mkdir translated_files
-    echo "[INFO] Created output directory: translated_files"
-fi
-echo ""
-
 # ========================================
 # STEP 7: Quick Integrity Check (Silent)
 # ========================================
