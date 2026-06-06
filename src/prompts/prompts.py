@@ -244,16 +244,16 @@ def generate_translation_prompt(
 Translate {source_language} to {target_language}. Output only the translation.
 
 **PRIORITY ORDER:**
-1. Preserve exact names
-2. Match original tone and formality
-3. Use natural {target_language} phrasing - never word-for-word
-4. Fix grammar/spelling errors in output
-5. Translate idioms to {target_language} equivalents
+1. Match original tone and formality
+2. Use natural {target_language} phrasing - never word-for-word
+3. Fix grammar/spelling errors in output
+4. Translate idioms to {target_language} equivalents
 
-**TERMINOLOGY RULE (CRITICAL):**
-- For professional, technical, or specialized terms, use the most widely accepted mainstream translation in {target_language}, followed immediately by the original {source_language} term in parentheses.
-- Format: Translated Term (Original Term)
-- Example: 面向对象编程 (Object-Oriented Programming) / 机器学习 (Machine Learning)
+**PROPER NOUNS RULE (CRITICAL):**
+- You MUST translate ALL proper nouns (including names of people, characters, cities, countries, and locations) into {target_language}.
+- Use standard phonetic transliteration or established conventional translations.
+- ABSOLUTELY DO NOT leave person names or location names in {source_language}.
+- Example: "Oleg Sokolov" -> "奥列格·索科洛夫", "Paris" -> "巴黎".
 
 **QUALITY CHECK:**
 - Does it sound natural to a native {target_language} speaker?
