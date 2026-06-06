@@ -250,6 +250,11 @@ Translate {source_language} to {target_language}. Output only the translation.
 4. Fix grammar/spelling errors in output
 5. Translate idioms to {target_language} equivalents
 
+**TERMINOLOGY RULE (CRITICAL):**
+- For professional, technical, or specialized terms, use the most widely accepted mainstream translation in {target_language}, followed immediately by the original {source_language} term in parentheses.
+- Format: Translated Term (Original Term)
+- Example: 面向对象编程 (Object-Oriented Programming) / 机器学习 (Machine Learning)
+
 **QUALITY CHECK:**
 - Does it sound natural to a native {target_language} speaker?
 - Are all details from the original included?
