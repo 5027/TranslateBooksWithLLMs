@@ -70,14 +70,8 @@ from src.utils.unified_logger import LogLevel, LogType
 def _log_error(log_callback: Optional[Callable], event_name: str, message: str):
     """Helper to log error messages in red color"""
     if log_callback:
-        # Check if this is a new-style logger with LogLevel support
-        try:
-            from src.utils.unified_logger import get_logger
-            logger = get_logger()
-            logger.error(message)
-        except Exception:
-            # Fallback to legacy callback
-            log_callback(event_name, message)
+        # Use the provided log_callback which is already job-specific
+        log_callback(event_name, message)
 
 
 class PlaceholderManager:

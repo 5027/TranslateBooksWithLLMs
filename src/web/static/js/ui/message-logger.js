@@ -472,10 +472,18 @@ export const MessageLogger = {
      */
     updateTranslationPreview(response) {
         const previewElement = DomHelpers.getElement('lastTranslationPreview');
+        
+        // Safety: If window.currentActiveTranslationId is set but we found the 
+        // template instead of the job-specific element, skip update to avoid 
+        // writing to the hidden template.
+        if (window.currentActiveTranslationId && previewElement && previewElement.id === 'lastTranslationPreview') {
+            return;
+        }
+
         if (!previewElement) return;
 
-        // Extract text between <TRANSLATION> tags
-        const translateMatch = response.match(/<TRANSLATION>([\s\S]*?)<\/TRANSLATION>/);
+        // Extract text between <TRANSLATION> tags (case-insensitive)
+        const translateMatch = response.match(/<TRANSLATION>([\s\S]*?)<\/TRANSLATION>/i);
         if (!translateMatch) return;
 
         let translatedText = translateMatch[1];

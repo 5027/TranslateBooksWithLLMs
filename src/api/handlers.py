@@ -99,7 +99,7 @@ async def perform_actual_translation(translation_id, config, state_manager, outp
 
     # Setup unified logger for web interface
     def web_callback(log_entry):
-        """Callback for WebSocket emission"""
+        """Callback for WebSocket emission and state storage"""
         logs = state_manager.get_translation_field(translation_id, 'logs')
         if logs is None:
             logs = []
@@ -109,12 +109,8 @@ async def perform_actual_translation(translation_id, config, state_manager, outp
         emit_update(socketio, translation_id, {'log': log_entry['message'], 'log_entry': log_entry}, state_manager)
     
     def storage_callback(log_entry):
-        """Callback for storing logs"""
-        logs = state_manager.get_translation_field(translation_id, 'logs')
-        if logs is None:
-            logs = []
-        logs.append(log_entry)
-        state_manager.set_translation_field(translation_id, 'logs', logs)
+        """No-op storage callback (handled by web_callback to avoid duplication)"""
+        pass
     
     logger = setup_web_logger(web_callback, storage_callback)
     

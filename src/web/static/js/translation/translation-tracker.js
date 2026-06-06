@@ -474,14 +474,17 @@ export const TranslationTracker = {
             this.removeJobUIContainer(data.translation_id);
         } else if (data.status === 'running') {
             MessageLogger.resetProgressTracking();
-            
+
             // Only show progress section specific to this job
             const containerId = `job_progress_${data.translation_id}`;
             const container = document.getElementById(containerId);
             if (container) {
                 container.style.display = 'block';
             }
-            // this.updateTranslationTitle(currentFile); // Let ensureJobUIContainer handle title
+
+            // Re-render rich title for this specific job
+            this.updateTranslationTitle(currentFile);
+
             this.resetOpenRouterCostDisplay();
 
             MessageLogger.showMessage(t('translation:translation_in_progress', { name: currentFile.name }), 'info');
@@ -502,6 +505,9 @@ export const TranslationTracker = {
         const activeJobsContainer = document.getElementById('activeJobsContainer');
         const template = document.getElementById('progressSectionTemplate');
         if (!activeJobsContainer || !template) return;
+
+        // Ensure template is clean before cloning
+        MessageLogger.resetTranslationPreview();
 
         // Clone template
         const clone = template.cloneNode(true);

@@ -469,7 +469,13 @@ _global_logger = None
 
 def get_logger(name: str = "TranslateBookWithLLM", **kwargs) -> UnifiedLogger:
     """
-    Get or create the global logger instance
+    Get or create a logger instance.
+    
+    In multi-job scenarios (like the web API), you should pass callbacks
+    to get a job-specific logger. To avoid interfering with other jobs,
+    this function will return a NEW instance if callbacks are provided.
+    
+    If no callbacks are provided, it returns the global singleton (for CLI/legacy).
 
     Args:
         name: Logger name
@@ -479,19 +485,20 @@ def get_logger(name: str = "TranslateBookWithLLM", **kwargs) -> UnifiedLogger:
         UnifiedLogger instance
     """
     global _global_logger
+    
+    # If callbacks are provided, always return a new instance to support 
+    # concurrent jobs without race conditions on callbacks.
+    if 'web_callback' in kwargs or 'storage_callback' in kwargs:
+        return UnifiedLogger(name, **kwargs)
+        
+    # Otherwise use/create the global singleton
     if _global_logger is None:
         _global_logger = UnifiedLogger(name, **kwargs)
-    else:
-        # Update callbacks if provided (for multi-job scenarios)
-        if 'web_callback' in kwargs:
-            _global_logger.web_callback = kwargs['web_callback']
-        if 'storage_callback' in kwargs:
-            _global_logger.storage_callback = kwargs['storage_callback']
     return _global_logger
 
 
 def setup_cli_logger(enable_colors: bool = True) -> UnifiedLogger:
-    """Setup logger for CLI usage"""
+    """Setup logger for CLI usage (uses singleton)"""
     # Import here to avoid circular dependencies
     from src.config import DEBUG_MODE
 
@@ -503,11 +510,13 @@ def setup_cli_logger(enable_colors: bool = True) -> UnifiedLogger:
 
 
 def setup_web_logger(web_callback: Callable, storage_callback: Callable) -> UnifiedLogger:
-    """Setup logger for web interface usage"""
+    """Setup a new logger for web interface usage (non-singleton)"""
     # Import here to avoid circular dependencies
     from src.config import DEBUG_MODE
 
-    return get_logger(
+    # We always want a new instance for web jobs to avoid callback overwriting
+    return UnifiedLogger(
+        name="TranslateBook-WebJob",
         console_output=True,  # Also output to console for debugging
         enable_colors=True,   # Colors work in console even for web
         min_level=LogLevel.DEBUG if DEBUG_MODE else LogLevel.INFO,
