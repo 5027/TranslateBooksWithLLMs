@@ -482,11 +482,18 @@ export const MessageLogger = {
 
         if (!previewElement) return;
 
-        // Extract text between <TRANSLATION> tags (case-insensitive)
-        const translateMatch = response.match(/<TRANSLATION>([\s\S]*?)<\/TRANSLATION>/i);
-        if (!translateMatch) return;
+        // Extract text between <TRANSLATION> tags (case-insensitive), allowing for missing closing tag
+        let translatedText = '';
+        const translateMatch = response.match(/<TRANSLATION>([\s\S]*?)(?:<\/TRANSLATION>|$)/i);
+        
+        if (translateMatch) {
+            translatedText = translateMatch[1];
+        } else {
+            // Fallback: strip <think>...</think> blocks and take the rest
+            translatedText = response.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        }
 
-        let translatedText = translateMatch[1];
+        if (!translatedText) return;
 
         // Remove placeholder tags for cleaner preview (UI only, not in console logs)
         // NOTE: These patterns must stay synchronized with src/config.py

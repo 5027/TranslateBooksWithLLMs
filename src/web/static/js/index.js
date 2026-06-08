@@ -298,6 +298,9 @@ function wireModuleEvents() {
     // File list changed -> update display
     window.addEventListener('fileListChanged', () => {
         FileUpload.updateFileDisplay();
+        if (StateManager.getState('translation.isBatchActive')) {
+            BatchController.processNextFileInQueue();
+        }
     });
 
     // File status changed -> update display
