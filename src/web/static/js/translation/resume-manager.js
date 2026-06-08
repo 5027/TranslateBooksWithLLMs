@@ -266,8 +266,8 @@ export const ResumeManager = {
             const jobs = data.resumable_jobs || [];
 
             // Get active translation state
-            const hasActiveTranslation = StateManager.getState('translation.hasActive') || false;
             const activeJobs = StateManager.getState('translation.activeJobs') || [];
+            const isMaxActive = activeJobs.length >= 5;
 
             // Hide loading
             if (loading) loading.style.display = 'none';
@@ -283,11 +283,11 @@ export const ResumeManager = {
             if (section) section.style.display = 'block';
             if (listContainer) listContainer.style.display = 'block';
 
-            // Build warning banner if active translation exists
-            const warningBanner = createWarningBanner(hasActiveTranslation ? activeJobs : null);
+            // Build warning banner if max limit reached
+            const warningBanner = createWarningBanner(isMaxActive ? activeJobs : null);
 
             // Build jobs HTML
-            const jobsHtml = jobs.map(job => formatJobCard(job, hasActiveTranslation, activeJobs)).join('');
+            const jobsHtml = jobs.map(job => formatJobCard(job, isMaxActive, activeJobs)).join('');
 
             if (!listContainer) {
                 console.error('Error: resumableJobsList element not found');
@@ -324,10 +324,9 @@ export const ResumeManager = {
      */
     async resumeJob(translationId, overrides = null) {
         // Check if there's an active translation
-        const hasActive = StateManager.getState('translation.hasActive') || false;
         const activeJobs = StateManager.getState('translation.activeJobs') || [];
 
-        if (hasActive) {
+        if (activeJobs.length >= 5) {
             const activeNames = activeJobs.map(job => job.output_filename || t('translation:job_card_unknown')).join(', ');
             MessageLogger.showMessage(
                 t('translation:cannot_resume_active', { names: activeNames }),

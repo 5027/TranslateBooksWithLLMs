@@ -75,6 +75,11 @@ class LiteLLMProvider(LLMProvider):
             api_base: Optional custom endpoint (self-hosted gateways, proxies).
         """
         super().__init__(model, api_keys=api_key, provider_name="litellm")
+        
+        if api_base:
+            api_base = api_base.strip()
+            if not api_base.startswith(('http://', 'https://')):
+                api_base = f"https://{api_base}"
         self.api_base = api_base
 
     def _build_kwargs(self) -> dict:

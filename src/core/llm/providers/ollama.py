@@ -36,6 +36,12 @@ class OllamaProvider(LLMProvider):
     def __init__(self, api_endpoint: str = API_ENDPOINT, model: str = DEFAULT_MODEL,
                  context_window: int = OLLAMA_NUM_CTX, log_callback: Optional[Callable] = None):
         super().__init__(model)
+        
+        # Clean up endpoint
+        api_endpoint = api_endpoint.strip() if api_endpoint else API_ENDPOINT
+        if not api_endpoint.startswith(('http://', 'https://')):
+            api_endpoint = f"http://{api_endpoint}"
+            
         # Convert /api/generate endpoint to /api/chat for proper think support
         self.api_endpoint = api_endpoint.replace('/api/generate', '/api/chat')
         self.context_window = context_window

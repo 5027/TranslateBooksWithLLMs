@@ -82,7 +82,12 @@ class DeepSeekProvider(LLMProvider):
                 inject ``thinking={"type":"disabled"}`` to skip reasoning tokens.
         """
         super().__init__(model, api_keys=api_key, provider_name="deepseek")
-        self.api_endpoint = api_endpoint or self.API_URL
+        
+        api_endpoint = api_endpoint.strip() if api_endpoint else self.API_URL
+        if not api_endpoint.startswith(('http://', 'https://')):
+            api_endpoint = f"https://{api_endpoint}"
+            
+        self.api_endpoint = api_endpoint
         self.disable_thinking = disable_thinking
 
     def _get_context_limit(self) -> int:
