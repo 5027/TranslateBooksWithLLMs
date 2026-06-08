@@ -47,16 +47,25 @@ class TokenChunker:
 
     def split_into_paragraphs(self, text: str) -> List[str]:
         """
-        Split text into paragraphs using double newlines.
+        Split text into paragraphs.
+        
+        Attempts to split by double newlines. If the text uses single newlines
+        for paragraphs (common in raw TXT files), it falls back to single newline split.
 
         Args:
             text: Input text
 
         Returns:
-            List of paragraphs (preserving single newlines within)
+            List of paragraphs
         """
-        # Split on double newlines (or more)
+        # Try splitting on double newlines (or more)
         paragraphs = re.split(r'\n\s*\n', text)
+        
+        # Heuristic: If we found very few double-newline paragraphs but many single newlines,
+        # the file likely uses single newlines for paragraph breaks.
+        if len(paragraphs) < 10 and text.count('\n') > 20:
+            paragraphs = text.split('\n')
+            
         # Filter out empty paragraphs but preserve whitespace-only ones as empty markers
         return [p for p in paragraphs if p.strip()]
 
