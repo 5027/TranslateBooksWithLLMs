@@ -16,11 +16,13 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from src.core.glossary.models import BulkReplaceResult, Glossary, GlossaryTerm
+from src.config import OUTPUT_DIR
 
 logger = logging.getLogger("glossary.store")
 
-LEGACY_DB_PATH = "data/jobs.db"
-DEFAULT_DB_PATH = "data/glossaries.db"
+LEGACY_DB_PATH = os.path.join(OUTPUT_DIR, "data", "jobs.db")
+DEFAULT_DB_PATH = os.path.join(OUTPUT_DIR, "data", "glossaries.db")
+
 
 # Backoff retry on transient SQLite "database is locked" errors. Total budget
 # is short (~750ms across 4 attempts).
@@ -77,9 +79,9 @@ def _is_lock_error(exc: BaseException) -> bool:
 class GlossaryStore:
     """Thread-safe SQLite-backed store for glossaries and their terms."""
 
-    def __init__(self, db_path: str = DEFAULT_DB_PATH):
+    def __init__(self, db_path: Optional[str] = None):
         """Initialize the store and ensure schema exists."""
-        self.db_path = db_path
+        self.db_path = db_path or DEFAULT_DB_PATH
         self._local = threading.local()
         self._lock = threading.RLock()
         # _local.connection is per-thread and unreachable from other threads;

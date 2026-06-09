@@ -53,22 +53,35 @@ def _apply_resume_overrides(config, overrides):
     Returns a Flask (response, status) tuple to abort with on validation failure,
     or None on success.
     """
-    if not isinstance(overrides, dict) or not overrides:
-        return None
+    if not isinstance(overrides, dict):
+        overrides = {}
 
     if overrides.get('model'):
         config['model'] = overrides['model']
     if overrides.get('llm_provider'):
         config['llm_provider'] = str(overrides['llm_provider']).lower()
+
+    provider = (config.get('llm_provider') or 'ollama').lower()
+
+    # Refresh endpoint and keys from current environment/config if not explicitly 
+    # overridden. This ensures that if the user updated .env and restarted, 
+    # resumed jobs pick up the new infrastructure settings instead of being 
+    # stuck with stale values persisted in SQLite.
+    import src.config as _cfg
     if overrides.get('llm_api_endpoint'):
         config['llm_api_endpoint'] = overrides['llm_api_endpoint']
+    else:
+        # Refresh from current .env defaults
+        if provider == 'ollama':
+            config['llm_api_endpoint'] = _cfg.OLLAMA_API_ENDPOINT
+        elif provider == 'openai':
+            config['llm_api_endpoint'] = _cfg.OPENAI_API_ENDPOINT
+
     if overrides.get('context_window') is not None:
         try:
             config['context_window'] = int(overrides['context_window'])
         except (TypeError, ValueError):
             return jsonify({"error": "context_window must be an integer"}), 400
-
-    provider = (config.get('llm_provider') or 'ollama').lower()
 
     # A single generic api_key override maps to the chosen provider's key field,
     # resolved through .env like every other entry point.
@@ -76,6 +89,13 @@ def _apply_resume_overrides(config, overrides):
     if provider in _KEY_PROVIDERS and raw_key not in (None, ''):
         env_var = f"{provider.upper()}_API_KEY"
         config[f"{provider}_api_key"] = _resolve_api_key(raw_key, env_var)
+    elif not raw_key:
+        # Refresh all cloud provider keys from .env if not explicitly overridden
+        for p in _KEY_PROVIDERS:
+            if not overrides.get(f"{p}_api_key"):
+                env_val = os.getenv(f"{p.upper()}_API_KEY")
+                if env_val:
+                    config[f"{p}_api_key"] = env_val
 
     # A cloud provider needs a key from the override, the restored config, or .env.
     if provider in _KEY_PROVIDERS:

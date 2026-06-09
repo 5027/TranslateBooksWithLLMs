@@ -7,6 +7,7 @@ import shutil
 from typing import Optional, Dict, List, Any, Tuple
 from pathlib import Path
 from .database import Database
+from src.config import OUTPUT_DIR
 
 
 class CheckpointManager:
@@ -15,7 +16,7 @@ class CheckpointManager:
     and file storage for uploaded files.
     """
 
-    def __init__(self, db_path: str = "data/jobs.db", server_session_id: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, server_session_id: Optional[str] = None):
         """
         Initialize checkpoint manager.
 
@@ -23,8 +24,11 @@ class CheckpointManager:
             db_path: Path to SQLite database
             server_session_id: Unique identifier for the current server session
         """
+        if db_path is None:
+            db_path = os.path.join(OUTPUT_DIR, "data", "jobs.db")
+            
         self.db = Database(db_path)
-        self.uploads_dir = Path("data/uploads")
+        self.uploads_dir = Path(OUTPUT_DIR) / "data" / "uploads"
         self.uploads_dir.mkdir(parents=True, exist_ok=True)
         self.server_session_id = server_session_id
 
