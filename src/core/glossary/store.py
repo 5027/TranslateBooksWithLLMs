@@ -89,7 +89,7 @@ class GlossaryStore:
         self._all_connections: list = []
         self._connections_lock = threading.RLock()
 
-        directory = os.path.dirname(db_path)
+        directory = os.path.dirname(self.db_path)
         if directory:
             os.makedirs(directory, exist_ok=True)
 
