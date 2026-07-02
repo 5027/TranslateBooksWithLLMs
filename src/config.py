@@ -236,10 +236,9 @@ TEMPERATURE = float(os.getenv('TEMPERATURE', '0.3'))
 # BLOCK_LOW_AND_ABOVE, HARM_BLOCK_THRESHOLD_UNSPECIFIED.
 GEMINI_SAFETY_THRESHOLD = os.getenv('GEMINI_SAFETY_THRESHOLD', 'BLOCK_NONE')
 
-# Auto-pause on HTTP 429 rate limit
-# When True (default): translation pauses after retries are exhausted; user resumes manually.
-# When False: translation auto-resumes from the last checkpoint after waiting `retry_after`
-# seconds (or RATE_LIMIT_AUTO_RESUME_DELAY if no Retry-After header).
+# Auto-resume behavior after HTTP 429 retries are exhausted.
+# When True (default): checkpoint, wait with stepped backoff, then resume.
+# When False: use the legacy fixed wait (`retry_after` or RATE_LIMIT_AUTO_RESUME_DELAY).
 AUTO_PAUSE_ON_RATE_LIMIT = os.getenv('AUTO_PAUSE_ON_RATE_LIMIT', 'true').lower() == 'true'
 RATE_LIMIT_AUTO_RESUME_DELAY = int(os.getenv('RATE_LIMIT_AUTO_RESUME_DELAY', '60'))
 

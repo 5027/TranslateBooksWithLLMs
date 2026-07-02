@@ -43,8 +43,8 @@
   "naming_convention_input_title": "可使用 {originalName}、{targetLang}、{sourceLang}、{model}、{date}、{datetime}、{ext} 作为占位符",
   "naming_convention_help": "占位符：{originalName}、{targetLang}、{sourceLang}、{model}、{date}、{datetime}、{ext}<br>示例：{originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "速率限制（HTTP 429）时不自动暂停",
-  "disable_auto_pause_description": "默认情况下，当服务商触发速率限制时翻译会暂停，并要求您手动恢复。启用此选项以让翻译持续运行：它会等待 <code>Retry-After</code> 秒（或默认 60 秒），然后从最后的检查点自动恢复。适合在免费层 API 上跑长篇小说。随时点击\"中断\"可取消自动恢复。",
+  "disable_auto_pause_title": "速率限制（HTTP 429）时使用固定等待",
+  "disable_auto_pause_description": "默认情况下，非人为触发的速率限制暂停会从最后的检查点按阶梯退避自动恢复。启用此选项后改用固定的 <code>Retry-After</code> 等待时间（或默认 60 秒）。可使用每个任务的“暂停”按钮取消该任务的自动恢复。",
 
   "translation_options": "翻译选项",
   "post_processing": "后处理",

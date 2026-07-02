@@ -491,12 +491,6 @@ window.resetForm = FormManager.resetForm.bind(FormManager);
 // Batch Controller
 window.startBatchTranslation = BatchController.startBatchTranslation.bind(BatchController);
 window.interruptCurrentTranslation = async () => {
-    const currentJob = StateManager.getState('translation.currentJob');
-    if (!currentJob) {
-        MessageLogger.showMessage(t('translation:no_active_translation'), 'info');
-        return;
-    }
-
     const interruptBtn = DomHelpers.getElement('interruptBtn');
     if (interruptBtn) {
         interruptBtn.disabled = true;
@@ -504,9 +498,11 @@ window.interruptCurrentTranslation = async () => {
     }
 
     try {
-        await ApiClient.interruptTranslation(currentJob.translationId);
-        MessageLogger.showMessage(t('translation:interrupt_request_sent'), 'info');
-        MessageLogger.addLog(t('translation:interrupt_log'));
+        const result = await TranslationTracker.interruptAllActiveJobs();
+        if ((result.requested === 0 || result.failed > 0) && interruptBtn) {
+            interruptBtn.disabled = false;
+            DomHelpers.setText(interruptBtn, `⏹️ ${t('translation:interrupt_batch')}`);
+        }
     } catch (error) {
         MessageLogger.showMessage(t('translation:interrupt_error', { error: error.message }), 'error');
         if (interruptBtn) {

@@ -31,8 +31,8 @@ class RateLimitError(Exception):
     Raised when the API returns HTTP 429 (Too Many Requests) and all retry
     attempts with backoff have been exhausted.
 
-    This signals the translation pipeline to auto-pause and save a checkpoint
-    so the user can resume later.
+    This signals the translation pipeline to checkpoint and auto-resume with
+    rate-limit backoff, unless the user cancels the pending resume.
 
     Attributes:
         retry_after: Suggested wait time in seconds (from Retry-After header),

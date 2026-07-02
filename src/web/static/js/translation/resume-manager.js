@@ -11,6 +11,7 @@ import { MessageLogger } from '../ui/message-logger.js';
 import { DomHelpers } from '../ui/dom-helpers.js';
 import { ProgressManager } from './progress-manager.js';
 import { TranslationTracker } from './translation-tracker.js';
+import { renderTranslationTitle } from './progress-title.js';
 import { t, getCurrentLocale, applyToDOM } from '../i18n/i18n.js';
 import { createProviderModelPicker } from '../providers/provider-model-picker.js';
 
@@ -385,7 +386,14 @@ export const ResumeManager = {
 
             // Update title with actual filename
             const fileName = jobData.config?.output_filename || t('translation:resumed_translation_default');
-            DomHelpers.setText('currentFileProgressTitle', t('translation:resuming_file', { name: fileName }));
+            renderTranslationTitle({
+                name: fileName,
+                fileType: jobData.config?.file_type || 'txt',
+                operation: jobData.config?.refine_only ? 'refine' : 'translate',
+                refineAfter: !!jobData.config?.refine_after,
+                sourceLanguage: jobData.config?.source_language,
+                targetLanguage: jobData.config?.target_language
+            });
 
             // Show stats grid
             DomHelpers.show('statsGrid');

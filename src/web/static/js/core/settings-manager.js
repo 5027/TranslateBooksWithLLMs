@@ -498,7 +498,7 @@ export const SettingsManager = {
                 envSettings['OUTPUT_FILENAME_PATTERN'] = filenamePattern;
             }
 
-            // Save disable auto-pause flag (runtime behavior default)
+            // Save fixed rate-limit wait flag (runtime behavior default)
             const disableAutoPauseCheckbox = DomHelpers.getElement('disableAutoPause');
             envSettings['DISABLE_AUTO_PAUSE'] = (disableAutoPauseCheckbox && disableAutoPauseCheckbox.checked) ? 'true' : 'false';
 

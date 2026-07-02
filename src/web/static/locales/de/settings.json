@@ -43,8 +43,8 @@
   "naming_convention_input_title": "Verwenden Sie {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext} als Platzhalter",
   "naming_convention_help": "Platzhalter: {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}<br>Beispiel: {originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "Bei Ratenbegrenzung (HTTP 429) nicht automatisch pausieren",
-  "disable_auto_pause_description": "Standardmäßig wird die Übersetzung pausiert, sobald der Anbieter eine Ratenbegrenzung anwendet, und Sie werden um manuelles Fortsetzen gebeten. Aktivieren Sie diese Option, damit die Übersetzung weiterläuft: Sie wartet <code>Retry-After</code> Sekunden (oder standardmäßig 60 s) und setzt automatisch ab dem letzten Checkpoint fort. Nützlich für lange Romane mit Free-Tier-APIs. Klicken Sie jederzeit auf „Abbrechen“, um die automatische Fortsetzung zu beenden.",
+  "disable_auto_pause_title": "Feste Wartezeit bei Ratenbegrenzung (HTTP 429) verwenden",
+  "disable_auto_pause_description": "Standardmäßig werden nicht vom Benutzer ausgelöste Ratenbegrenzungs-Pausen ab dem letzten Checkpoint mit gestaffeltem Backoff automatisch fortgesetzt. Aktivieren Sie diese Option, um stattdessen eine feste <code>Retry-After</code>-Wartezeit (oder standardmäßig 60 s) zu verwenden. Mit der Pausentaste einer Aufgabe brechen Sie deren automatische Fortsetzung ab.",
 
   "translation_options": "Übersetzungsoptionen",
   "post_processing": "Nachbearbeitung",

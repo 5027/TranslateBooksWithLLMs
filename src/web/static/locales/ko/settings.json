@@ -43,8 +43,8 @@
   "naming_convention_input_title": "{originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}를 플레이스홀더로 사용",
   "naming_convention_help": "플레이스홀더: {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}<br>예: {originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "속도 제한 (HTTP 429) 시 자동 일시 중지 안 함",
-  "disable_auto_pause_description": "기본적으로 제공자가 속도 제한을 가하면 번역이 일시 중지되고 수동으로 재개하도록 요청합니다. 이 옵션을 활성화하면 번역이 계속 실행됩니다: <code>Retry-After</code> 초 (또는 기본 60초) 동안 대기한 다음 마지막 체크포인트에서 자동으로 재개됩니다. 무료 등급 API에서 긴 소설을 번역할 때 유용합니다. 자동 재개를 취소하려면 언제든지 \"중단\"을 클릭하세요.",
+  "disable_auto_pause_title": "속도 제한 (HTTP 429) 시 고정 대기 사용",
+  "disable_auto_pause_description": "기본적으로 사용자 조작이 아닌 속도 제한 일시 중지는 마지막 체크포인트에서 단계적 백오프로 자동 재개됩니다. 이 옵션을 활성화하면 고정 <code>Retry-After</code> 대기 시간(또는 기본 60초)을 사용합니다. 각 작업의 일시 중지 버튼으로 자동 재개를 취소할 수 있습니다.",
 
   "translation_options": "번역 옵션",
   "post_processing": "후처리",

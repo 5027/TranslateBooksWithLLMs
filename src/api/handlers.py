@@ -27,6 +27,64 @@ from src.utils.notifier import notify, EVENT_SUCCESS, EVENT_FAILURE, EVENT_INTER
 from .websocket import emit_update
 
 
+RATE_LIMIT_BACKOFF_MAX_SECONDS = 900
+
+
+def calculate_rate_limit_backoff_seconds(
+    retry_after,
+    attempt,
+    base_delay=RATE_LIMIT_AUTO_RESUME_DELAY,
+    max_delay=RATE_LIMIT_BACKOFF_MAX_SECONDS,
+):
+    """Return the wait time for an automatic rate-limit resume attempt.
+
+    The provider's Retry-After header is a floor. Without one, or when repeated
+    attempts stall at the same checkpoint, we climb 1x, 2x, 4x... up to a cap.
+    """
+    try:
+        normalized_attempt = max(1, int(attempt))
+    except (TypeError, ValueError):
+        normalized_attempt = 1
+
+    try:
+        normalized_base = max(1, int(base_delay))
+    except (TypeError, ValueError):
+        normalized_base = RATE_LIMIT_AUTO_RESUME_DELAY
+
+    try:
+        normalized_cap = max(normalized_base, int(max_delay))
+    except (TypeError, ValueError):
+        normalized_cap = RATE_LIMIT_BACKOFF_MAX_SECONDS
+
+    stepped_delay = min(
+        normalized_cap,
+        normalized_base * (2 ** (normalized_attempt - 1)),
+    )
+
+    try:
+        retry_after_delay = max(0, int(retry_after or 0))
+    except (TypeError, ValueError):
+        retry_after_delay = 0
+
+    return max(retry_after_delay, stepped_delay)
+
+
+def next_rate_limit_backoff_attempt(config, resume_index):
+    """Return the per-job backoff attempt number for the current checkpoint."""
+    last_resume_index = config.get('_auto_resume_last_index')
+    try:
+        previous_attempt = int(
+            config.get('_rate_limit_backoff_attempt',
+                       config.get('_auto_resume_stuck_count', 0))
+        )
+    except (TypeError, ValueError):
+        previous_attempt = 0
+
+    if last_resume_index == resume_index:
+        return max(1, previous_attempt + 1)
+    return 1
+
+
 def _notification_context(config, translation_id, elapsed_time, error=None):
     """Build the context dict passed to webhook notifications."""
     ctx = {
@@ -697,108 +755,143 @@ async def perform_actual_translation(translation_id, config, state_manager, outp
             }, namespace='/')
 
     except RateLimitError as e:
-        auto_pause = config.get('auto_pause_on_rate_limit', AUTO_PAUSE_ON_RATE_LIMIT)
         retry_msg = f" Retry suggested after ~{e.retry_after}s." if e.retry_after else ""
         provider_name = e.provider or config.get('llm_provider', 'API')
 
         if not state_manager.exists(translation_id):
             return
 
-        # Auto-resume mode keeps the job running: wait, then re-enter from the checkpoint.
-        if not auto_pause:
-            wait_seconds = e.retry_after or RATE_LIMIT_AUTO_RESUME_DELAY
-            wait_msg = (f"⏳ Rate limited by {provider_name}.{retry_msg} "
-                        f"Auto-resume in {wait_seconds}s (auto-pause disabled).")
-            _log_message_callback("rate_limit_auto_resume", wait_msg)
-
-            # Surface 'rate_limited' transiently so the UI shows what's happening.
-            state_manager.set_translation_field(translation_id, 'status', 'rate_limited')
-            emit_update(socketio, translation_id, {
-                'status': 'rate_limited',
-                'log': wait_msg
-            }, state_manager)
-
-            await asyncio.sleep(wait_seconds)
-
-            # Honor an interrupt that arrived during the wait by falling through to pause.
-            if state_manager.get_translation_field(translation_id, 'interrupted'):
-                _log_message_callback("rate_limit_auto_resume_cancelled",
-                    "🛑 Auto-resume cancelled by user, pausing instead.")
-            else:
-                cp_data = checkpoint_manager.load_checkpoint(translation_id)
-                if cp_data:
-                    # Track consecutive auto-resume cycles that fail without
-                    # translating any chunk past the checkpoint. After three
-                    # such cycles the daily quota is probably exhausted and
-                    # the loop is just burning time, so we warn the user.
-                    # We keep auto-resuming because they explicitly opted in,
-                    # but the warning lets them choose to pause manually.
-                    resume_index = cp_data['resume_from_index']
-                    last_resume_index = config.get('_auto_resume_last_index')
-                    stuck_count = config.get('_auto_resume_stuck_count', 0)
-                    if last_resume_index == resume_index:
-                        stuck_count += 1
-                    else:
-                        stuck_count = 1
-                    if stuck_count >= 3:
-                        _log_message_callback(
-                            "rate_limit_auto_resume_stuck",
-                            f"⚠️ Auto-resume has looped {stuck_count} times without "
-                            f"progress (still stuck at chunk {resume_index}). Your "
-                            f"daily quota may be exhausted or the provider is "
-                            f"throttling this account; consider interrupting now "
-                            f"and checking your provider's quota dashboard. "
-                            f"Auto-resume will keep trying but may be wasting time."
-                        )
-
-                    new_config = dict(config)
-                    new_config['is_resume'] = True
-                    new_config['resume_from_index'] = resume_index
-                    new_config['_auto_resume_last_index'] = resume_index
-                    new_config['_auto_resume_stuck_count'] = stuck_count
-                    checkpoint_manager.mark_running(translation_id)
-                    state_manager.set_translation_field(translation_id, 'status', 'running')
-                    emit_update(socketio, translation_id, {
-                        'status': 'running',
-                        'log': f"▶️ Auto-resuming from chunk {resume_index}..."
-                    }, state_manager)
-                    await perform_actual_translation(
-                        translation_id, new_config, state_manager, output_dir, socketio
-                    )
-                    return
-                # No checkpoint available, fall through to the pause path below.
-                _log_message_callback("rate_limit_no_checkpoint",
-                    "⚠️ Auto-resume requested but no checkpoint found, falling back to pause.")
-
-        pause_msg = f"⏸️ Rate limited by {provider_name}.{retry_msg} Translation auto-paused, you can resume when ready."
-        _log_message_callback("rate_limit_auto_pause", pause_msg)
-
-        state_manager.set_translation_field(translation_id, 'status', 'rate_limited')
-        state_manager.set_translation_field(translation_id, 'interrupted', True)
-        checkpoint_manager.mark_interrupted(translation_id)
-
         stats = state_manager.get_translation_field(translation_id, 'stats') or {}
         elapsed_time = time.time() - stats.get('start_time', time.time())
         _finalize_stats_callback({'elapsed_time': elapsed_time})
 
+        cp_data = checkpoint_manager.load_checkpoint(translation_id)
+        if not cp_data:
+            pause_msg = (
+                f"⏸️ Rate limited by {provider_name}.{retry_msg} "
+                f"Translation paused, but no checkpoint was available for auto-resume."
+            )
+            _log_message_callback("rate_limit_no_checkpoint", pause_msg)
+            state_manager.set_translation_field(translation_id, 'status', 'interrupted')
+            state_manager.set_translation_field(translation_id, 'interrupted', True)
+            state_manager.set_translation_field(translation_id, 'auto_resume_pending', False)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_seconds', None)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_attempt', None)
+            checkpoint_manager.mark_interrupted(translation_id)
+            emit_update(socketio, translation_id, {
+                'status': 'interrupted',
+                'log': pause_msg,
+                'result': state_manager.get_translation_field(translation_id, 'result') or "Translation paused (rate limited)"
+            }, state_manager)
+            socketio.emit('checkpoint_created', {
+                'translation_id': translation_id,
+                'status': 'interrupted',
+                'message': pause_msg
+            }, namespace='/')
+            return
+
+        resume_index = cp_data['resume_from_index']
+        use_stepped_backoff = config.get('auto_pause_on_rate_limit', AUTO_PAUSE_ON_RATE_LIMIT)
+        backoff_attempt = next_rate_limit_backoff_attempt(config, resume_index)
+        if use_stepped_backoff:
+            wait_seconds = calculate_rate_limit_backoff_seconds(
+                e.retry_after,
+                backoff_attempt,
+            )
+            wait_mode = f"step {backoff_attempt}"
+            strategy_label = "stepped backoff"
+        else:
+            wait_seconds = e.retry_after or RATE_LIMIT_AUTO_RESUME_DELAY
+            wait_mode = "fixed delay"
+            strategy_label = "fixed waits"
+
+        wait_msg = (
+            f"⏳ Rate limited by {provider_name}.{retry_msg} "
+            f"Auto-resume from chunk {resume_index} in {wait_seconds}s "
+            f"({wait_mode})."
+        )
+        _log_message_callback("rate_limit_auto_resume_backoff", wait_msg)
+
+        # Keep the in-memory task non-interrupted so it can resume itself. The
+        # DB job stays running while auto-resume is pending; if the app exits,
+        # startup recovery will convert stale running jobs to interrupted.
+        state_manager.set_translation_field(translation_id, 'status', 'rate_limited')
+        state_manager.set_translation_field(translation_id, 'interrupted', False)
+        state_manager.set_translation_field(translation_id, 'auto_resume_pending', True)
+        state_manager.set_translation_field(translation_id, 'rate_limit_backoff_seconds', wait_seconds)
+        state_manager.set_translation_field(translation_id, 'rate_limit_backoff_attempt', backoff_attempt)
+
         emit_update(socketio, translation_id, {
             'status': 'rate_limited',
-            'log': pause_msg,
-            'result': state_manager.get_translation_field(translation_id, 'result') or f"Translation paused (rate limited)"
+            'auto_resume': True,
+            'auto_resume_pending': True,
+            'backoff_seconds': wait_seconds,
+            'backoff_attempt': backoff_attempt,
+            'log': wait_msg
         }, state_manager)
 
-        socketio.emit('checkpoint_created', {
-            'translation_id': translation_id,
-            'status': 'rate_limited',
-            'message': pause_msg
-        }, namespace='/')
+        if backoff_attempt >= 3:
+            _log_message_callback(
+                "rate_limit_auto_resume_stuck",
+                f"⚠️ Auto-resume has hit rate limits {backoff_attempt} times "
+                f"at chunk {resume_index}. The wait will continue with "
+                f"{strategy_label}; pause this task if the provider quota is exhausted."
+            )
 
-        output_filepath = state_manager.get_translation_field(translation_id, 'output_filepath')
-        if output_filepath and os.path.exists(output_filepath):
-            socketio.emit('file_list_changed', {
-                'reason': 'rate_limited',
-                'filename': config.get('output_filename', 'unknown')
+        await asyncio.sleep(wait_seconds)
+
+        if not state_manager.exists(translation_id):
+            return
+
+        if (state_manager.get_translation_field(translation_id, 'interrupted')
+                or state_manager.get_translation_field(translation_id, 'status') == 'interrupted'):
+            pause_msg = (
+                f"🛑 Auto-resume cancelled. Translation paused at chunk "
+                f"{resume_index}; resume it manually when ready."
+            )
+            _log_message_callback("rate_limit_auto_resume_cancelled", pause_msg)
+            state_manager.set_translation_field(translation_id, 'status', 'interrupted')
+            state_manager.set_translation_field(translation_id, 'interrupted', True)
+            state_manager.set_translation_field(translation_id, 'auto_resume_pending', False)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_seconds', None)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_attempt', None)
+            checkpoint_manager.mark_interrupted(translation_id)
+            emit_update(socketio, translation_id, {
+                'status': 'interrupted',
+                'log': pause_msg,
+                'result': state_manager.get_translation_field(translation_id, 'result') or "Translation paused"
+            }, state_manager)
+            socketio.emit('checkpoint_created', {
+                'translation_id': translation_id,
+                'status': 'interrupted',
+                'message': pause_msg
             }, namespace='/')
+            await asyncio.to_thread(notify, EVENT_INTERRUPTION,
+                _notification_context(config, translation_id, elapsed_time))
+            return
+
+        new_config = dict(config)
+        new_config['is_resume'] = True
+        new_config['resume_from_index'] = resume_index
+        new_config['_auto_resume_last_index'] = resume_index
+        new_config['_auto_resume_stuck_count'] = backoff_attempt
+        new_config['_rate_limit_backoff_attempt'] = backoff_attempt
+
+        checkpoint_manager.mark_running(translation_id)
+        state_manager.set_translation_field(translation_id, 'status', 'running')
+        state_manager.set_translation_field(translation_id, 'interrupted', False)
+        state_manager.set_translation_field(translation_id, 'auto_resume_pending', False)
+        state_manager.set_translation_field(translation_id, 'rate_limit_backoff_seconds', None)
+        state_manager.set_translation_field(translation_id, 'rate_limit_backoff_attempt', None)
+        emit_update(socketio, translation_id, {
+            'status': 'running',
+            'auto_resume_pending': False,
+            'log': f"▶️ Auto-resuming from chunk {resume_index}..."
+        }, state_manager)
+        await perform_actual_translation(
+            translation_id, new_config, state_manager, output_dir, socketio
+        )
+        return
 
     except Exception as e:
         critical_error_msg = f"Critical error during translation task ({translation_id}): {str(e)}"

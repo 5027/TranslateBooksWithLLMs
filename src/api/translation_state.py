@@ -54,6 +54,7 @@ class TranslationStateManager:
                 'result': None,
                 'config': config,
                 'interrupted': False,
+                'auto_resume_pending': False,
                 'output_filepath': None
             }
     
@@ -161,7 +162,10 @@ class TranslationStateManager:
                     # legacy fields above for back-compat.
                     "percent": stats.get('percent'),
                     "phase": stats.get('phase'),
-                    "last_translation": data.get('last_translation')
+                    "last_translation": data.get('last_translation'),
+                    "auto_resume_pending": data.get('auto_resume_pending', False),
+                    "rate_limit_backoff_seconds": data.get('rate_limit_backoff_seconds'),
+                    "rate_limit_backoff_attempt": data.get('rate_limit_backoff_attempt')
                 })
             return sorted(summaries, key=lambda x: x.get('start_time', 0), reverse=True)
     
@@ -210,6 +214,7 @@ class TranslationStateManager:
                 'result': None,
                 'config': copy.deepcopy(job['config']),
                 'interrupted': False,
+                'auto_resume_pending': False,
                 'output_filepath': job['config'].get('output_filepath'),
                 'resume_from_index': checkpoint_data['resume_from_index']
             }

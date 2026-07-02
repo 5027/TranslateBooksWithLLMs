@@ -174,4 +174,26 @@ export function renderTranslationTitle(file) {
 
     // Add main container to title element
     titleElement.appendChild(mainContainer);
+
+    const translationId = window.currentActiveTranslationId;
+    if (translationId) {
+        const interruptButton = document.createElement('button');
+        interruptButton.type = 'button';
+        interruptButton.className = 'job-interrupt-btn btn btn-danger';
+        interruptButton.dataset.translationId = translationId;
+        interruptButton.title = t('translation:interrupt_task_title');
+        interruptButton.ariaLabel = t('translation:interrupt_task_title');
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.textContent = 'pause_circle';
+        interruptButton.appendChild(icon);
+
+        const label = document.createElement('span');
+        label.className = 'job-interrupt-label';
+        label.textContent = t('translation:interrupt_task');
+        interruptButton.appendChild(label);
+
+        titleElement.appendChild(interruptButton);
+    }
 }

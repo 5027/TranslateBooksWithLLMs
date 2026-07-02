@@ -818,6 +818,36 @@ select.form-control {
     gap: 0.75rem;
 }
 
+.progress-section h3 > div:first-child {
+    min-width: 0;
+}
+
+.job-interrupt-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.8125rem;
+    border-radius: 0.75rem;
+    white-space: nowrap;
+}
+
+.job-interrupt-btn .material-symbols-outlined {
+    font-size: 1.1rem;
+}
+
+@media (max-width: 640px) {
+    .progress-section h3 {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .job-interrupt-btn {
+        align-self: flex-start;
+    }
+}
+
 .progress-bar-container {
     height: 2.5rem;
     background: var(--background-light);
@@ -3924,4 +3954,3 @@ html.dark .file-test-btn { color: #a5b4fc; }
     vertical-align: middle;
     animation: spin 0.8s linear infinite;
 }
-

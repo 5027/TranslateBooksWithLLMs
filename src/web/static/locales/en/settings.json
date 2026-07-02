@@ -43,8 +43,8 @@
   "naming_convention_input_title": "Use {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext} as placeholders",
   "naming_convention_help": "Placeholders: {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}<br>Example: {originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "Don't auto-pause on rate limit (HTTP 429)",
-  "disable_auto_pause_description": "By default, the translation pauses after the provider rate-limits and asks you to resume manually. Enable this to keep the translation running: it will wait for <code>Retry-After</code> seconds (or 60s default) and auto-resume from the last checkpoint. Useful for long novels on free-tier APIs. Click \"Interrupt\" anytime to cancel the auto-resume.",
+  "disable_auto_pause_title": "Use fixed wait on rate limit (HTTP 429)",
+  "disable_auto_pause_description": "By default, non-user rate-limit pauses auto-resume with stepped backoff from the last checkpoint. Enable this to use a fixed <code>Retry-After</code> wait (or 60s default) instead. Use a task's Pause button to cancel its auto-resume.",
 
   "translation_options": "Translation Options",
   "post_processing": "Post-Processing",

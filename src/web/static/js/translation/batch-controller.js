@@ -241,6 +241,8 @@ export const BatchController = {
      * Process next file in queue
      */
     async processNextFileInQueue() {
+        if (!StateManager.getState('translation.isBatchActive')) return;
+
         // Wait for active state update to know how many are running
         const activeResponse = await TranslationTracker.updateActiveTranslationsState();
         const activeJobsCount = activeResponse.activeJobs ? activeResponse.activeJobs.length : 0;

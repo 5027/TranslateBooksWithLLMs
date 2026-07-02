@@ -52,6 +52,13 @@ function validateTranslationState(data) {
     return true;
 }
 
+function isActiveTranslationSummary(job) {
+    if (!job) return false;
+    return job.status === 'running'
+        || job.status === 'queued'
+        || (job.status === 'rate_limited' && job.auto_resume_pending);
+}
+
 export const TranslationTracker = {
     // Debounce timer for saving state
     _saveStateTimer: null,
@@ -195,7 +202,7 @@ export const TranslationTracker = {
                     if (serverState.status === 'completed' ||
                         serverState.status === 'error' ||
                         serverState.status === 'interrupted' ||
-                        serverState.status === 'rate_limited') {
+                        (serverState.status === 'rate_limited' && !serverState.auto_resume_pending)) {
 
                         MessageLogger.addLog(t('translation:session_sync_log', { status: serverState.status }));
                         this.resetUIToIdle();
@@ -296,9 +303,7 @@ export const TranslationTracker = {
     async restoreActiveTranslation() {
         try {
             const response = await ApiClient.getActiveTranslations();
-            const activeJobs = (response.translations || []).filter(
-                t => t.status === 'running' || t.status === 'queued'
-            );
+            const activeJobs = (response.translations || []).filter(isActiveTranslationSummary);
 
             if (activeJobs.length === 0) return;
 
@@ -320,6 +325,7 @@ export const TranslationTracker = {
                         name: job.input_filename,
                         translationId: job.translation_id,
                         status: 'Processing',
+                        fileType: job.file_type || 'txt',
                         type: job.file_type || 'txt',
                         isVirtual: true
                     };
@@ -330,6 +336,7 @@ export const TranslationTracker = {
                     window.currentActiveTranslationId = job.translation_id;
                     
                     this.ensureJobUIContainer(job.translation_id, matchingFile);
+                    this.updateTranslationTitle(matchingFile);
 
                     // Calculate progress from stats
                     if (job.total_chunks > 0) {
@@ -385,6 +392,97 @@ export const TranslationTracker = {
         StateManager.subscribe('translation.activeJobs', () => {
             this.saveTranslationState();
         });
+
+        if (!this._jobInterruptHandlerAttached) {
+            document.addEventListener('click', (event) => {
+                const target = event.target instanceof Element
+                    ? event.target
+                    : event.target?.parentElement;
+                const button = target?.closest('.job-interrupt-btn');
+                if (!button) return;
+                event.preventDefault();
+                this.interruptJob(button.dataset.translationId, button);
+            });
+            this._jobInterruptHandlerAttached = true;
+        }
+    },
+
+    async interruptJob(translationId, button = null) {
+        if (!translationId) {
+            MessageLogger.showMessage(t('translation:no_active_translation'), 'info');
+            return false;
+        }
+
+        const activeJobs = StateManager.getState('translation.activeJobs') || [];
+        const job = activeJobs.find(item => item.translation_id === translationId);
+        const displayName = job?.output_filename || job?.input_filename || translationId;
+        const label = button?.querySelector('.job-interrupt-label');
+
+        if (button) {
+            button.disabled = true;
+        }
+        if (label) {
+            label.textContent = t('translation:interrupting');
+        }
+
+        try {
+            await ApiClient.interruptTranslation(translationId);
+            MessageLogger.showMessage(
+                t('translation:interrupt_task_request_sent', { name: displayName }),
+                'info'
+            );
+            MessageLogger.addLog(t('translation:interrupt_task_log', { name: displayName }));
+            return true;
+        } catch (error) {
+            MessageLogger.showMessage(
+                t('translation:interrupt_task_error', { name: displayName, error: error.message }),
+                'error'
+            );
+            if (button) {
+                button.disabled = false;
+            }
+            if (label) {
+                label.textContent = t('translation:interrupt_task');
+            }
+            return false;
+        }
+    },
+
+    async interruptAllActiveJobs() {
+        await this.updateActiveTranslationsState();
+        const activeJobs = StateManager.getState('translation.activeJobs') || [];
+        const ids = activeJobs
+            .filter(isActiveTranslationSummary)
+            .map(job => job.translation_id)
+            .filter(Boolean);
+
+        const currentJob = StateManager.getState('translation.currentJob');
+        if (currentJob?.translationId && !ids.includes(currentJob.translationId)) {
+            ids.push(currentJob.translationId);
+        }
+
+        if (ids.length === 0) {
+            MessageLogger.showMessage(t('translation:no_active_translation'), 'info');
+            return { requested: 0, failed: 0 };
+        }
+
+        StateManager.setState('translation.isBatchActive', false);
+        const results = await Promise.allSettled(
+            ids.map(translationId => ApiClient.interruptTranslation(translationId))
+        );
+        const failed = results.filter(result => result.status === 'rejected').length;
+
+        if (failed === 0) {
+            MessageLogger.showMessage(t('translation:interrupt_request_sent'), 'info');
+            MessageLogger.addLog(t('translation:interrupt_all_log', { count: ids.length }));
+        } else {
+            MessageLogger.showMessage(
+                t('translation:interrupt_all_error', { failed, count: ids.length }),
+                'error'
+            );
+        }
+
+        return { requested: ids.length, failed };
     },
 
     /**
@@ -408,6 +506,18 @@ export const TranslationTracker = {
                 type: 'unknown',
                 isVirtual: true
             };
+        }
+        if (currentFile) {
+            currentFile.name = currentFile.name
+                || currentFile.input_filename
+                || currentFile.output_filename
+                || data.translation_id;
+            currentFile.translationId = currentFile.translationId
+                || currentFile.translation_id
+                || data.translation_id;
+            currentFile.fileType = currentFile.fileType
+                || currentFile.file_type
+                || currentFile.type;
         }
 
         // Set global context for DomHelpers
@@ -452,6 +562,16 @@ export const TranslationTracker = {
             );
             this.updateActiveTranslationsState();
             this.removeJobUIContainer(data.translation_id);
+        } else if (data.status === 'rate_limited' && data.auto_resume_pending) {
+            MessageLogger.showMessage(
+                t('translation:translation_rate_limited_auto_resume_msg', {
+                    name: currentFile.name,
+                    seconds: data.backoff_seconds || data.rate_limit_backoff_seconds || 0
+                }),
+                'info'
+            );
+            this.updateFileStatusInList(currentFile.name, 'Rate Limited');
+            this.updateActiveTranslationsState();
         } else if (data.status === 'rate_limited') {
             MessageLogger.resetProgressTracking();
             this.finishFileTranslation(
@@ -645,11 +765,17 @@ export const TranslationTracker = {
             StateManager.setState('translation.currentJob', null);
         }
 
+        const batchStillActive = StateManager.getState('translation.isBatchActive');
+
         if (resultData.status === 'completed') {
-            this.processNextFileInQueue();
+            if (batchStillActive) {
+                this.processNextFileInQueue();
+            }
         } else if (resultData.status === 'interrupted') {
-            MessageLogger.addLog(t('translation:batch_stopped_user_log'));
-            // Only idle if no more active jobs
+            MessageLogger.addLog(t('translation:task_paused_log', { name: fileRef.name }));
+            if (batchStillActive) {
+                this.processNextFileInQueue();
+            }
             setTimeout(() => {
                 const active = StateManager.getState('translation.activeJobs') || [];
                 if (active.length === 0) this.resetUIToIdle();
@@ -659,7 +785,9 @@ export const TranslationTracker = {
             // Pause current batch flow but let others continue
         } else {
             // On error, still try to move to next
-            this.processNextFileInQueue();
+            if (batchStillActive) {
+                this.processNextFileInQueue();
+            }
         }
     },
 
@@ -931,9 +1059,7 @@ export const TranslationTracker = {
     async updateActiveTranslationsState() {
         try {
             const response = await ApiClient.getActiveTranslations();
-            const activeJobs = (response.translations || []).filter(
-                t => t.status === 'running' || t.status === 'queued'
-            );
+            const activeJobs = (response.translations || []).filter(isActiveTranslationSummary);
 
             const wasActive = StateManager.getState('translation.hasActive');
             const hasActive = activeJobs.length > 0;

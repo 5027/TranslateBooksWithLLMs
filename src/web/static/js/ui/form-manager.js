@@ -441,7 +441,7 @@ export const FormManager = {
                 DomHelpers.setValue('outputFilenamePattern', config.output_filename_pattern);
             }
 
-            // Disable auto-pause on rate limit (runtime behavior default)
+            // Fixed rate-limit wait strategy (runtime behavior default)
             if (typeof config.disable_auto_pause === 'boolean') {
                 const disableAutoPauseCheckbox = DomHelpers.getElement('disableAutoPause');
                 if (disableAutoPauseCheckbox) {
@@ -728,7 +728,7 @@ export const FormManager = {
             },
             // Bilingual output (original + translation interleaved)
             bilingual_output: DomHelpers.getElement('bilingualMode')?.checked || false,
-            // Disable auto-pause on rate limit (auto-resume after Retry-After)
+            // Fixed vs stepped rate-limit auto-resume strategy
             auto_pause_on_rate_limit: !(DomHelpers.getElement('disableAutoPause')?.checked || false),
             // TTS configuration
             tts_enabled: ttsEnabled,

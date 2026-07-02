@@ -43,8 +43,8 @@
   "naming_convention_input_title": "Usa {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext} como variables",
   "naming_convention_help": "Variables: {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}<br>Ejemplo: {originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "No pausar automáticamente al alcanzar el límite de tasa (HTTP 429)",
-  "disable_auto_pause_description": "Por defecto, la traducción se pausa cuando el proveedor aplica un límite de tasa y te pide reanudarla manualmente. Activa esta opción para mantener la traducción en marcha: esperará <code>Retry-After</code> segundos (o 60s por defecto) y se reanudará automáticamente desde el último punto de control. Útil para novelas largas con APIs de nivel gratuito. Pulsa «Interrumpir» en cualquier momento para cancelar la reanudación automática.",
+  "disable_auto_pause_title": "Usar espera fija al alcanzar el límite de tasa (HTTP 429)",
+  "disable_auto_pause_description": "Por defecto, las pausas por límite de tasa no iniciadas por el usuario se reanudan automáticamente desde el último punto de control con retroceso escalonado. Activa esta opción para usar una espera fija de <code>Retry-After</code> (o 60s por defecto). Usa el botón Pausar de una tarea para cancelar su reanudación automática.",
 
   "translation_options": "Opciones de traducción",
   "post_processing": "Post-procesamiento",

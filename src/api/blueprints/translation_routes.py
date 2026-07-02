@@ -167,7 +167,7 @@ def create_translation_blueprint(state_manager, start_translation_job):
             'openrouter_api_key': _resolve_api_key(data.get('openrouter_api_key'), 'OPENROUTER_API_KEY'),
             # Prompt options (optional instructions to include in the system prompt)
             'prompt_options': data.get('prompt_options', {}),
-            # Auto-pause on rate limit toggle (request overrides .env default)
+            # Rate-limit wait strategy toggle (request overrides .env default)
             'auto_pause_on_rate_limit': data.get('auto_pause_on_rate_limit', AUTO_PAUSE_ON_RATE_LIMIT),
             # Bilingual output (original + translation interleaved)
             'bilingual_output': data.get('bilingual_output', False),
@@ -235,7 +235,10 @@ def create_translation_blueprint(state_manager, start_translation_job):
             "result_preview": "[Preview functionality removed. Download file to view content.]" if job_data.get('status') in ['completed', 'interrupted', 'partial'] else None,
             "error": job_data.get('error'),
             "config": job_data.get('config'),
-            "output_filepath": job_data.get('output_filepath')
+            "output_filepath": job_data.get('output_filepath'),
+            "auto_resume_pending": job_data.get('auto_resume_pending', False),
+            "rate_limit_backoff_seconds": job_data.get('rate_limit_backoff_seconds'),
+            "rate_limit_backoff_attempt": job_data.get('rate_limit_backoff_attempt')
         })
 
     @bp.route('/api/translation/<translation_id>/interrupt', methods=['POST'])
@@ -257,6 +260,10 @@ def create_translation_blueprint(state_manager, start_translation_job):
             # the job as still-active.
             state_manager.set_interrupted(translation_id, True)
             state_manager.set_translation_field(translation_id, 'status', 'interrupted')
+            state_manager.set_translation_field(translation_id, 'auto_resume_pending', False)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_seconds', None)
+            state_manager.set_translation_field(translation_id, 'rate_limit_backoff_attempt', None)
+            state_manager.checkpoint_manager.mark_interrupted(translation_id)
             return jsonify({
                 "message": "Auto-resume cancelled. Translation marked interrupted; you can resume manually later."
             }), 200

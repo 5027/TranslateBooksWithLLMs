@@ -43,8 +43,8 @@
   "naming_convention_input_title": "Utilisez {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext} comme variables",
   "naming_convention_help": "Variables : {originalName}, {targetLang}, {sourceLang}, {model}, {date}, {datetime}, {ext}<br>Exemple : {originalName} ({targetLang}) ({model})_{date}.{ext}",
 
-  "disable_auto_pause_title": "Ne pas mettre en pause automatiquement sur limite de débit (HTTP 429)",
-  "disable_auto_pause_description": "Par défaut, la traduction est mise en pause après une limite de débit du fournisseur et vous demande de reprendre manuellement. Activez cette option pour garder la traduction en cours : elle attendra <code>Retry-After</code> secondes (ou 60 s par défaut) et reprendra automatiquement depuis le dernier point de reprise. Utile pour les romans longs sur les API gratuites. Cliquez sur « Interrompre » à tout moment pour annuler la reprise automatique.",
+  "disable_auto_pause_title": "Utiliser une attente fixe sur limite de débit (HTTP 429)",
+  "disable_auto_pause_description": "Par défaut, les pauses de limite de débit non déclenchées par l'utilisateur reprennent automatiquement depuis le dernier point de reprise avec un backoff progressif. Activez cette option pour utiliser une attente fixe <code>Retry-After</code> (ou 60 s par défaut). Utilisez le bouton Pause d'une tâche pour annuler sa reprise automatique.",
 
   "translation_options": "Options de traduction",
   "post_processing": "Post-traitement",

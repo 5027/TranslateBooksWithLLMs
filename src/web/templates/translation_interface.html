@@ -457,7 +457,7 @@
                     </button>
                     <button class="btn btn-danger hidden" id="interruptBtn" onclick="interruptCurrentTranslation()">
                         <span class="material-symbols-outlined">stop_circle</span>
-                        <span data-i18n="translation:interrupt_batch">Interrupt Current & Stop Batch</span>
+                        <span data-i18n="translation:interrupt_batch">Interrupt Active & Stop Batch</span>
                     </button>
                 </div>
 
@@ -479,8 +479,8 @@
                     <h3 id="currentFileProgressTitle" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span class="material-symbols-outlined">monitoring</span>
-                            <span class="job-filename" style="font-weight: 600;">Filename</span>
-                            <span class="job-status-badge" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: var(--primary-color-light); color: var(--primary-color-dark);">Processing</span>
+                            <span class="job-filename" data-i18n="files:filename_column" style="font-weight: 600;">Filename</span>
+                            <span class="job-status-badge" data-i18n="translation:active_badge" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: var(--primary-color-light); color: var(--primary-color-dark);">Active</span>
                         </div>
                     </h3>
                     <div class="progress-bar-container">
@@ -917,14 +917,14 @@
                         </small>
                     </div>
 
-                    <!-- Don't auto-pause on rate limit (runtime behavior, not a stylistic option) -->
+                    <!-- Fixed rate-limit wait strategy (runtime behavior, not a stylistic option) -->
                     <div class="option-item">
                         <label class="option-item__label">
                             <input type="checkbox" id="disableAutoPause">
                             <div>
-                                <span class="option-item__title" data-i18n="settings:disable_auto_pause_title">Don't auto-pause on rate limit (HTTP 429)</span>
+                                <span class="option-item__title" data-i18n="settings:disable_auto_pause_title">Use fixed wait on rate limit (HTTP 429)</span>
                                 <p class="option-item__description" data-i18n-html="settings:disable_auto_pause_description">
-                                    By default, the translation pauses after the provider rate-limits and asks you to resume manually. Enable this to keep the translation running: it will wait for <code>Retry-After</code> seconds (or 60s default) and auto-resume from the last checkpoint. Useful for long novels on free-tier APIs. Click "Interrupt" anytime to cancel the auto-resume.
+                                    By default, non-user rate-limit pauses auto-resume with stepped backoff from the last checkpoint. Enable this to use a fixed <code>Retry-After</code> wait (or 60s default) instead. Use a task's Pause button to cancel its auto-resume.
                                 </p>
                             </div>
                         </label>
