@@ -63,6 +63,7 @@ function readGlobalLlmConfig() {
     let apiEndpoint;
     if (provider === 'ollama') apiEndpoint = (DomHelpers.getValue('apiEndpoint') || '').trim() || undefined;
     else if (provider === 'openai') apiEndpoint = (DomHelpers.getValue('openaiEndpoint') || '').trim() || undefined;
+    else if (provider === 'gemini') apiEndpoint = (DomHelpers.getValue('geminiEndpoint') || '').trim() || undefined;
 
     return {
         provider,

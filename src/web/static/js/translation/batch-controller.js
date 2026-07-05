@@ -28,6 +28,12 @@ function earlyValidationFail(message) {
     return false;
 }
 
+function endpointForProvider(provider) {
+    if (provider === 'openai') return DomHelpers.getValue('openaiEndpoint');
+    if (provider === 'gemini') return DomHelpers.getValue('geminiEndpoint');
+    return DomHelpers.getValue('apiEndpoint');
+}
+
 
 /**
  * Get translation configuration from form
@@ -82,9 +88,7 @@ function getTranslationConfig(file) {
         source_language: sourceLanguageVal,
         target_language: targetLanguageVal,
         model: currentModel,
-        llm_api_endpoint: provider === 'openai' ?
-                         DomHelpers.getValue('openaiEndpoint') :
-                         DomHelpers.getValue('apiEndpoint'),
+        llm_api_endpoint: endpointForProvider(provider),
         llm_provider: provider,
         gemini_api_key: provider === 'gemini' ? ApiKeyUtils.getValue('geminiApiKey') : '',
         openai_api_key: provider === 'openai' ? ApiKeyUtils.getValue('openaiApiKey') : '',
@@ -187,10 +191,10 @@ export const BatchController = {
         }
 
         const provider = DomHelpers.getValue('llmProvider');
-        if (provider === 'ollama') {
-            const ollamaApiEndpoint = DomHelpers.getValue('apiEndpoint').trim();
-            if (!ollamaApiEndpoint) {
-                return earlyValidationFail(t('translation:validation_ollama_endpoint'));
+        if (['ollama', 'openai', 'gemini'].includes(provider)) {
+            const apiEndpoint = (endpointForProvider(provider) || '').trim();
+            if (!apiEndpoint) {
+                return earlyValidationFail(t('translation:validation_endpoint_empty'));
             }
         }
 
@@ -291,7 +295,7 @@ export const BatchController = {
         updateFileStatusInList(fileToTranslate.name, 'Preparing...');
 
         const provider = DomHelpers.getValue('llmProvider');
-        const endpoint = provider === 'openai' ? DomHelpers.getValue('openaiEndpoint') : '';
+        const endpoint = endpointForProvider(provider) || '';
         const apiKeyValidation = ApiKeyUtils.validateForProvider(provider, endpoint);
 
         if (!apiKeyValidation.valid) {

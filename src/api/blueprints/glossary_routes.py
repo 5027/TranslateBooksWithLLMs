@@ -851,7 +851,14 @@ def create_glossary_blueprint(store: Optional[GlossaryStore] = None):
 
             provider_type = (data.get('provider') or _config.LLM_PROVIDER or 'ollama').lower()
             model = data.get('model') or _config.DEFAULT_MODEL
-            api_endpoint = data.get('api_endpoint') or _config.API_ENDPOINT
+            if data.get('api_endpoint'):
+                api_endpoint = data.get('api_endpoint')
+            elif provider_type == 'openai':
+                api_endpoint = _config.OPENAI_API_ENDPOINT
+            elif provider_type == 'gemini':
+                api_endpoint = _config.GEMINI_API_ENDPOINT
+            else:
+                api_endpoint = _config.API_ENDPOINT
 
             api_key = data.get('api_key')
             if not api_key:

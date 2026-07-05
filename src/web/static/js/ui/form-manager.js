@@ -160,6 +160,14 @@ export const FormManager = {
             });
         }
 
+        const geminiEndpoint = DomHelpers.getElement('geminiEndpoint');
+        if (geminiEndpoint) {
+            geminiEndpoint.addEventListener('change', () => {
+                SettingsManager.markEndpointCustomized('gemini');
+                console.log('[FormManager] Gemini endpoint customized by user');
+            });
+        }
+
         // Reset endpoint to server default buttons
         const resetApiEndpointBtn = DomHelpers.getElement('resetApiEndpointBtn');
         if (resetApiEndpointBtn) {
@@ -179,6 +187,17 @@ export const FormManager = {
                 const serverEndpoint = config?.openai_api_endpoint;
                 if (serverEndpoint) {
                     SettingsManager.resetEndpointToServerDefault('openai', serverEndpoint);
+                }
+            });
+        }
+
+        const resetGeminiEndpointBtn = DomHelpers.getElement('resetGeminiEndpointBtn');
+        if (resetGeminiEndpointBtn) {
+            resetGeminiEndpointBtn.addEventListener('click', () => {
+                const config = StateManager.getState('ui.defaultConfig');
+                const serverEndpoint = config?.gemini_api_endpoint;
+                if (serverEndpoint) {
+                    SettingsManager.resetEndpointToServerDefault('gemini', serverEndpoint);
                 }
             });
         }
@@ -433,6 +452,17 @@ export const FormManager = {
                 } else {
                     // Use server default
                     DomHelpers.setValue('openaiEndpoint', config.openai_api_endpoint);
+                }
+            }
+
+            // Gemini endpoint/base URL (for Gemini native API or compatible proxies)
+            if (config.gemini_api_endpoint) {
+                const prefs = SettingsManager.getLocalPreferences();
+                if (prefs.geminiEndpointCustomized && prefs.lastGeminiEndpoint) {
+                    SettingsManager.updateEndpointBadge('gemini', true);
+                    console.log('[FormManager] Using customized Gemini endpoint:', prefs.lastGeminiEndpoint);
+                } else {
+                    DomHelpers.setValue('geminiEndpoint', config.gemini_api_endpoint);
                 }
             }
             
@@ -697,6 +727,8 @@ export const FormManager = {
         let apiEndpoint;
         if (provider === 'openai') {
             apiEndpoint = DomHelpers.getValue('openaiEndpoint');
+        } else if (provider === 'gemini') {
+            apiEndpoint = DomHelpers.getValue('geminiEndpoint');
         } else {
             apiEndpoint = DomHelpers.getValue('apiEndpoint');
         }

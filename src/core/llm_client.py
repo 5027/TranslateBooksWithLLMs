@@ -179,7 +179,7 @@ def create_llm_client(llm_provider: str, gemini_api_key: Optional[str],
     Args:
         llm_provider: Provider type ('ollama', 'gemini', 'openai', 'openrouter', 'mistral', 'deepseek', or 'poe', or 'nim')
         gemini_api_key: API key for Gemini provider
-        api_endpoint: API endpoint for custom Ollama instance or OpenAI-compatible API
+        api_endpoint: API endpoint/base URL for custom Ollama, Gemini, or OpenAI-compatible API
         model_name: Model name to use
         openai_api_key: API key for OpenAI provider
         openrouter_api_key: API key for OpenRouter provider
@@ -194,7 +194,8 @@ def create_llm_client(llm_provider: str, gemini_api_key: Optional[str],
         LLMClient instance or None if using default client
     """
     if llm_provider == "gemini" and gemini_api_key:
-        return LLMClient(provider_type="gemini", api_key=gemini_api_key, model=model_name)
+        return LLMClient(provider_type="gemini", api_key=gemini_api_key, model=model_name,
+                         api_endpoint=api_endpoint)
     if llm_provider == "openai":
         return LLMClient(provider_type="openai", api_endpoint=api_endpoint, model=model_name,
                          api_key=openai_api_key, context_window=context_window, log_callback=log_callback)

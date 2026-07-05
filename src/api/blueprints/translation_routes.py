@@ -38,7 +38,7 @@ def _resolve_api_key(value, env_var_name):
 _KEY_PROVIDERS = ('gemini', 'openai', 'openrouter', 'mistral', 'deepseek', 'poe', 'nim')
 
 # Providers that talk to a user-supplied endpoint; the others use a built-in one.
-_ENDPOINT_PROVIDERS = ('ollama', 'openai')
+_ENDPOINT_PROVIDERS = ('ollama', 'openai', 'gemini')
 
 
 def _apply_resume_overrides(config, overrides):
@@ -76,6 +76,8 @@ def _apply_resume_overrides(config, overrides):
             config['llm_api_endpoint'] = _cfg.OLLAMA_API_ENDPOINT
         elif provider == 'openai':
             config['llm_api_endpoint'] = _cfg.OPENAI_API_ENDPOINT
+        elif provider == 'gemini':
+            config['llm_api_endpoint'] = _cfg.GEMINI_API_ENDPOINT
 
     if overrides.get('context_window') is not None:
         try:

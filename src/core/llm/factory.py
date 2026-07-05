@@ -9,6 +9,7 @@ import os
 
 from src.config import (
     API_ENDPOINT, DEFAULT_MODEL, OLLAMA_NUM_CTX,
+    GEMINI_API_ENDPOINT,
     OPENROUTER_API_KEY, OPENROUTER_MODEL,
     MISTRAL_API_KEY, MISTRAL_MODEL, MISTRAL_API_ENDPOINT,
     DEEPSEEK_API_KEY, DEEPSEEK_MODEL, DEEPSEEK_API_ENDPOINT,
@@ -50,7 +51,7 @@ def create_llm_provider(provider_type: str = "ollama", **kwargs) -> LLMProvider:
     Args:
         provider_type: Type of provider ("ollama", "openai", "gemini", "openrouter", "mistral", "deepseek", "poe", "nim", "litellm")
         **kwargs: Provider-specific parameters:
-            - api_endpoint: API endpoint URL (Ollama, OpenAI)
+            - api_endpoint: API endpoint URL (Ollama, Gemini, OpenAI)
             - model: Model name/identifier
             - api_key: API key (Gemini, OpenAI, OpenRouter)
             - context_window: Context window size (Ollama, OpenAI)
@@ -107,7 +108,8 @@ def create_llm_provider(provider_type: str = "ollama", **kwargs) -> LLMProvider:
         )
         return GeminiProvider(
             api_key=api_key,
-            model=kwargs.get("model", "gemini-2.0-flash")
+            model=kwargs.get("model", "gemini-2.0-flash"),
+            api_endpoint=kwargs.get("api_endpoint") or kwargs.get("endpoint") or GEMINI_API_ENDPOINT,
         )
     elif provider_type.lower() == "openrouter":
         api_key = _require_key(

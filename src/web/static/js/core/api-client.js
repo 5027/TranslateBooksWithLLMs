@@ -308,8 +308,8 @@ export const ApiClient = {
             api_key: options.apiKey || '__USE_ENV__'
         };
 
-        // Include endpoint for OpenAI-compatible providers (llama.cpp, LM Studio, vLLM, etc.)
-        if (provider === 'openai' && options.apiEndpoint) {
+        // Include endpoint for providers with user-configurable endpoints.
+        if ((provider === 'openai' || provider === 'gemini') && options.apiEndpoint) {
             body.api_endpoint = options.apiEndpoint;
         }
 
@@ -623,4 +623,3 @@ export const ApiClient = {
         });
     }
 };
-

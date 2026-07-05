@@ -243,6 +243,25 @@ export const ProviderManager = {
             });
         }
 
+        // Add listener for Gemini endpoint/base URL changes
+        const geminiEndpoint = DomHelpers.getElement('geminiEndpoint');
+        if (geminiEndpoint) {
+            let endpointTimeout = null;
+            geminiEndpoint.addEventListener('input', () => {
+                clearTimeout(endpointTimeout);
+                endpointTimeout = setTimeout(() => {
+                    const currentProvider = DomHelpers.getValue('llmProvider');
+                    if (currentProvider === 'gemini') {
+                        this.loadGeminiModels();
+                    }
+                }, 500);
+            });
+        }
+
+        window.addEventListener('endpointReset', () => {
+            this.refreshModels();
+        });
+
         // Initialize SearchableSelect for model dropdown
         this.initSearchableModelSelect();
 
@@ -337,6 +356,7 @@ export const ProviderManager = {
         // Get provider settings elements
         const ollamaSettings = DomHelpers.getElement('ollamaSettings');
         const geminiSettings = DomHelpers.getElement('geminiSettings');
+        const geminiEndpointRow = DomHelpers.getElement('geminiEndpointRow');
         const openaiApiKeyGroup = DomHelpers.getElement('openaiApiKeyGroup');
         const openaiEndpointRow = DomHelpers.getElement('openaiEndpointRow');
         const openrouterSettings = DomHelpers.getElement('openrouterSettings');
@@ -351,6 +371,7 @@ export const ProviderManager = {
         if (provider === 'ollama') {
             DomHelpers.show('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -362,6 +383,7 @@ export const ProviderManager = {
         } else if (provider === 'poe') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -373,6 +395,7 @@ export const ProviderManager = {
         } else if (provider === 'gemini') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'block';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'block';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -384,6 +407,7 @@ export const ProviderManager = {
         } else if (provider === 'openai') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'block';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'block';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -395,6 +419,7 @@ export const ProviderManager = {
         } else if (provider === 'openrouter') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'block';
@@ -406,6 +431,7 @@ export const ProviderManager = {
         } else if (provider === 'mistral') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -417,6 +443,7 @@ export const ProviderManager = {
         } else if (provider === 'deepseek') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -428,6 +455,7 @@ export const ProviderManager = {
         } else if (provider === 'nim') {
             DomHelpers.hide('ollamaSettings');
             if (geminiSettings) geminiSettings.style.display = 'none';
+            if (geminiEndpointRow) geminiEndpointRow.style.display = 'none';
             if (openaiApiKeyGroup) openaiApiKeyGroup.style.display = 'none';
             if (openaiEndpointRow) openaiEndpointRow.style.display = 'none';
             if (openrouterSettings) openrouterSettings.style.display = 'none';
@@ -606,7 +634,8 @@ export const ProviderManager = {
         try {
             // Use ApiKeyUtils to get API key (returns '__USE_ENV__' if configured in .env)
             const apiKey = ApiKeyUtils.getValue('geminiApiKey');
-            const data = await ApiClient.getModels('gemini', { apiKey });
+            const apiEndpoint = DomHelpers.getValue('geminiEndpoint') || 'https://generativelanguage.googleapis.com/v1beta';
+            const data = await ApiClient.getModels('gemini', { apiKey, apiEndpoint });
 
             if (data.models && data.models.length > 0) {
                 MessageLogger.showMessage('', '');

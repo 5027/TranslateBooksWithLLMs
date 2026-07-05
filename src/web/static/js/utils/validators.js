@@ -131,7 +131,7 @@ export const Validators = {
             return false;
         }
 
-        if (formValues.provider === 'ollama' || formValues.provider === 'openai') {
+        if (formValues.provider === 'ollama' || formValues.provider === 'openai' || formValues.provider === 'gemini') {
             if (!this.validateApiEndpoint(formValues.apiEndpoint)) {
                 return false;
             }

@@ -888,6 +888,22 @@
                         </button>
                     </div>
 
+                    <!-- Gemini Endpoint Row (shown only for Gemini provider) -->
+                    <div id="geminiEndpointRow" style="display: none; margin-bottom: 15px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>
+                                <span data-i18n="settings:api_endpoint">API Endpoint</span>
+                                <span id="geminiEndpointBadge" class="badge badge-customized" data-i18n="settings:endpoint_custom_badge" style="display: none; margin-left: 8px; font-size: 0.75rem; background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px;">custom</span>
+                            </label>
+                            <div class="neu-inset-light" style="display: flex; gap: 8px;">
+                                <input type="text" class="form-control" id="geminiEndpoint" value="https://generativelanguage.googleapis.com/v1beta" placeholder="https://generativelanguage.googleapis.com/v1beta" style="flex: 1;">
+                                <button type="button" id="resetGeminiEndpointBtn" class="btn btn-secondary" data-i18n-attr="title:settings:reset_endpoint_title" style="display: none; padding: 8px 12px; white-space: nowrap;" title="Reset to server configuration">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">restart_alt</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- OpenAI Endpoint Row (shown only for OpenAI provider) -->
                     <div id="openaiEndpointRow" style="display: none; margin-bottom: 15px;">
                         <div class="form-group" style="margin-bottom: 0;">

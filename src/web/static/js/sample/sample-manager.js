@@ -63,10 +63,10 @@ const state = {
 // Value: { translate?: {output, metrics}, refine?: {output, metrics} }
 const resultsCache = new Map();
 
-// Providers that take a configurable API endpoint in the column UI. Both
+// Providers that take a configurable API endpoint in the column UI. These
 // default to the endpoint set in Settings (fetched once via /api/config).
-const ENDPOINT_PROVIDERS = new Set(['openai', 'ollama']);
-let settingsEndpoints = { ollama: '', openai: '' };
+const ENDPOINT_PROVIDERS = new Set(['openai', 'ollama', 'gemini']);
+let settingsEndpoints = { ollama: '', openai: '', gemini: '' };
 
 // Available custom-instruction presets (files in Custom_Instructions/), shared
 // by every column's per-LLM picker. [{ filename, display_name }]
@@ -91,6 +91,7 @@ function columnEndpoint(col) {
 /** Greyed-out hint shown when the endpoint field is empty, per provider. */
 function endpointPlaceholder(provider) {
     if (provider === 'ollama') return settingsEndpoints.ollama || 'http://localhost:11434/api/generate';
+    if (provider === 'gemini') return settingsEndpoints.gemini || 'https://generativelanguage.googleapis.com/v1beta';
     return settingsEndpoints.openai || 'https://api.openai.com/v1/chat/completions';
 }
 
@@ -104,6 +105,7 @@ async function loadSettingsEndpoints() {
         settingsEndpoints = {
             ollama: cfg.ollama_api_endpoint || cfg.api_endpoint || '',
             openai: cfg.openai_api_endpoint || '',
+            gemini: cfg.gemini_api_endpoint || '',
         };
         let changed = false;
         state.columns.forEach((col) => {
@@ -598,6 +600,8 @@ function applyColumnToSettings(idx) {
         DomHelpers.setValue('apiEndpoint', col.api_endpoint);
     } else if (col.provider === 'openai' && col.api_endpoint) {
         DomHelpers.setValue('openaiEndpoint', col.api_endpoint);
+    } else if (col.provider === 'gemini' && col.api_endpoint) {
+        DomHelpers.setValue('geminiEndpoint', col.api_endpoint);
     }
 
     // Custom instructions + glossary (plain selects in Settings).

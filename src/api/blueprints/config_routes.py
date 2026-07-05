@@ -148,13 +148,15 @@ def create_config_blueprint(server_session_id=None):
             data = request.get_json() or {}
             provider = data.get('provider', 'ollama')
             api_key = data.get('api_key')
+            api_endpoint = data.get('api_endpoint')
         else:
             # GET method - for Ollama or legacy compatibility
             provider = request.args.get('provider', 'ollama')
             api_key = request.args.get('api_key')
+            api_endpoint = request.args.get('api_endpoint')
 
         if provider == 'gemini':
-            return _get_gemini_models(api_key)
+            return _get_gemini_models(api_key, api_endpoint or _config.GEMINI_API_ENDPOINT)
         elif provider == 'openrouter':
             return _get_openrouter_models(api_key)
         elif provider == 'mistral':
@@ -201,6 +203,7 @@ def create_config_blueprint(server_session_id=None):
             "api_endpoint": _config.API_ENDPOINT,
             "ollama_api_endpoint": _config.OLLAMA_API_ENDPOINT,
             "openai_api_endpoint": _config.OPENAI_API_ENDPOINT,
+            "gemini_api_endpoint": _config.GEMINI_API_ENDPOINT,
             "default_model": _config.DEFAULT_MODEL,
             "default_source_language": _config.DEFAULT_SOURCE_LANGUAGE,
             "default_target_language": _config.DEFAULT_TARGET_LANGUAGE,
@@ -291,6 +294,7 @@ def create_config_blueprint(server_session_id=None):
         get_models_kwargs=None,
         model_name_field='id',
         include_model_names_on_error=True,
+        provider_kwargs=None,
     ):
         """Shared listing for cloud providers exposing `get_available_models()`.
 
@@ -322,7 +326,7 @@ def create_config_blueprint(server_session_id=None):
             return jsonify(_error_body("api_key_missing", api_key_missing_message))
 
         try:
-            provider = provider_class(api_key=api_key)
+            provider = provider_class(api_key=api_key, **(provider_kwargs or {}))
             models = asyncio.run(provider.get_available_models(**(get_models_kwargs or {})))
 
             if not models:
@@ -645,7 +649,7 @@ def create_config_blueprint(server_session_id=None):
             "error": fetch_error
         })
 
-    def _get_gemini_models(provided_api_key=None):
+    def _get_gemini_models(provided_api_key=None, api_endpoint=None):
         """Get available models from Gemini API"""
         from src.core.llm import GeminiProvider
         # Gemini's model dicts use 'name', not 'id'; error bodies historically
@@ -665,6 +669,7 @@ def create_config_blueprint(server_session_id=None):
             ),
             model_name_field='name',
             include_model_names_on_error=False,
+            provider_kwargs={"api_endpoint": api_endpoint or _config.GEMINI_API_ENDPOINT},
         )
 
     def _get_ollama_models():
@@ -929,6 +934,7 @@ def create_config_blueprint(server_session_id=None):
             'LLM_PROVIDER',
             'OLLAMA_API_ENDPOINT',
             'OPENAI_API_ENDPOINT',
+            'GEMINI_API_ENDPOINT',
             'OUTPUT_FILENAME_PATTERN',
             'MAX_TOKENS_PER_CHUNK',
             'DISABLE_AUTO_PAUSE',
@@ -1070,7 +1076,8 @@ def create_config_blueprint(server_session_id=None):
             "llm_provider": _config.LLM_PROVIDER,
             "api_endpoint": _config.API_ENDPOINT or "",
             "ollama_api_endpoint": _config.OLLAMA_API_ENDPOINT or "",
-            "openai_api_endpoint": _config.OPENAI_API_ENDPOINT or ""
+            "openai_api_endpoint": _config.OPENAI_API_ENDPOINT or "",
+            "gemini_api_endpoint": _config.GEMINI_API_ENDPOINT or ""
         })
 
     return bp

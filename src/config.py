@@ -56,6 +56,7 @@ if _debug_mode:
 _RELOADABLE_ENV_SETTINGS = (
     ('OLLAMA_API_ENDPOINT', 'OLLAMA_API_ENDPOINT', 'http://localhost:11434/api/generate'),
     ('OPENAI_API_ENDPOINT', 'OPENAI_API_ENDPOINT', 'https://api.openai.com/v1/chat/completions'),
+    ('GEMINI_API_ENDPOINT', 'GEMINI_API_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta'),
     ('DEFAULT_MODEL',       'DEFAULT_MODEL',       'qwen3:14b'),
     ('LLM_PROVIDER',        'LLM_PROVIDER',        'ollama'),
     ('GEMINI_API_KEY',      'GEMINI_API_KEY',      ''),
@@ -396,6 +397,7 @@ if DEBUG_MODE or _debug_mode:
     _config_logger.debug(f"   DEFAULT_TARGET_LANGUAGE: {DEFAULT_TARGET_LANGUAGE}")
     _config_logger.debug(f"   OLLAMA_NUM_CTX: {OLLAMA_NUM_CTX}")
     _config_logger.debug(f"   REQUEST_TIMEOUT: {REQUEST_TIMEOUT}")
+    _config_logger.debug(f"   GEMINI_API_ENDPOINT: {GEMINI_API_ENDPOINT}")
     _config_logger.debug(f"   GEMINI_API_KEY: {'***' + GEMINI_API_KEY[-4:] if GEMINI_API_KEY else '(not set)'}")
     _config_logger.debug(f"   OPENAI_API_KEY: {'***' + OPENAI_API_KEY[-4:] if OPENAI_API_KEY else '(not set)'}")
     _config_logger.debug(f"   OPENROUTER_API_KEY: {'***' + OPENROUTER_API_KEY[-4:] if OPENROUTER_API_KEY else '(not set)'}")

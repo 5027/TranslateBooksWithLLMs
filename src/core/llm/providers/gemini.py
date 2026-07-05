@@ -13,12 +13,14 @@ Features:
 from typing import List, Optional, Union
 import httpx
 import asyncio
+from urllib.parse import urlparse, urlunparse
 
 from src.config import (
     REQUEST_TIMEOUT,
     MAX_TRANSLATION_ATTEMPTS,
     TEMPERATURE,
     GEMINI_SAFETY_THRESHOLD,
+    GEMINI_API_ENDPOINT,
 )
 from ..base import LLMProvider, LLMResponse
 from ..exceptions import ContextOverflowError
@@ -35,6 +37,34 @@ _GEMINI_HARM_CATEGORIES = (
     "HARM_CATEGORY_SEXUALLY_EXPLICIT",
     "HARM_CATEGORY_DANGEROUS_CONTENT",
 )
+
+_DEFAULT_GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
+
+def _normalize_gemini_base_url(api_endpoint: Optional[str]) -> str:
+    """Return a Gemini API base URL ending at the API version path.
+
+    The UI labels this as a base URL, but older/manual configs may paste a
+    full `/models` or `/models/{model}:generateContent` endpoint. Normalize
+    those to the base so both listing and generation can build their routes.
+    """
+    endpoint = (api_endpoint or GEMINI_API_ENDPOINT or _DEFAULT_GEMINI_API_BASE).strip()
+    if not endpoint:
+        endpoint = _DEFAULT_GEMINI_API_BASE
+    if not endpoint.startswith(("http://", "https://")):
+        endpoint = f"https://{endpoint}"
+
+    parsed = urlparse(endpoint)
+    parsed = parsed._replace(query="", fragment="")
+    path = (parsed.path or "").rstrip("/")
+    if "/models" in path:
+        path = path.split("/models", 1)[0].rstrip("/")
+        parsed = parsed._replace(path=path, params="", query="", fragment="")
+        endpoint = urlunparse(parsed)
+    else:
+        endpoint = urlunparse(parsed)
+
+    return endpoint.rstrip("/")
 
 
 class GeminiProvider(LLMProvider):
@@ -63,7 +93,12 @@ class GeminiProvider(LLMProvider):
         >>> response = await provider.generate("Translate: Hello")
     """
 
-    def __init__(self, api_key: Union[str, List[str]], model: str = "gemini-2.0-flash"):
+    def __init__(
+        self,
+        api_key: Union[str, List[str]],
+        model: str = "gemini-2.0-flash",
+        api_endpoint: Optional[str] = None,
+    ):
         """
         Initialize the Gemini provider.
 
@@ -72,9 +107,16 @@ class GeminiProvider(LLMProvider):
                 of keys for automatic failover on HTTP 429 (the base class wraps
                 them in a KeyPool that rotates on rate-limit).
             model: Gemini model name (default: gemini-2.0-flash)
+            api_endpoint: Gemini API base URL (default:
+                https://generativelanguage.googleapis.com/v1beta). Custom
+                endpoints must preserve the native Gemini REST API shape.
         """
+        if model.startswith("models/"):
+            model = model.replace("models/", "", 1)
         super().__init__(model, api_keys=api_key, provider_name="gemini")
-        self.api_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        self.api_base_url = _normalize_gemini_base_url(api_endpoint)
+        self.models_endpoint = f"{self.api_base_url}/models"
+        self.api_endpoint = f"{self.api_base_url}/models/{model}:generateContent"
 
     def _is_thinking_model(self) -> bool:
         """Check if the current model supports thinking mode (Gemini 2.5+)."""
@@ -98,12 +140,10 @@ class GeminiProvider(LLMProvider):
             "x-goog-api-key": self.api_key
         }
 
-        models_endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
-
         client = await self._get_client()
         try:
             response = await client.get(
-                models_endpoint,
+                self.models_endpoint,
                 headers=headers,
                 timeout=10
             )

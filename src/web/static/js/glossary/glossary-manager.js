@@ -1455,7 +1455,9 @@ async function handleNerExtract() {
     const model = (DomHelpers.getValue('model') || '').trim();
     const apiEndpoint = (provider === 'openai'
         ? DomHelpers.getValue('openaiEndpoint')
-        : DomHelpers.getValue('apiEndpoint')) || '';
+        : provider === 'gemini'
+            ? DomHelpers.getValue('geminiEndpoint')
+            : DomHelpers.getValue('apiEndpoint')) || '';
     const apiKey = provider ? ApiKeyUtils.getValueForProvider(provider) : '';
 
     const payload = new FormData();

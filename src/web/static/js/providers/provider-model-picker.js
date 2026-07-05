@@ -26,11 +26,11 @@ import {
 } from './provider-select-helpers.js';
 
 // Providers that take a user-supplied endpoint; the rest use a built-in one.
-const ENDPOINT_PROVIDERS = new Set(['ollama', 'openai']);
+const ENDPOINT_PROVIDERS = new Set(['ollama', 'openai', 'gemini']);
 
 // Default endpoints, fetched once from Settings so a freshly picked
-// ollama/openai provider starts from the same endpoint as the rest of the app.
-let settingsEndpoints = { ollama: '', openai: '' };
+// endpoint-backed provider starts from the same endpoint as the rest of the app.
+let settingsEndpoints = { ollama: '', openai: '', gemini: '' };
 let endpointsLoaded = false;
 
 async function ensureSettingsEndpoints() {
@@ -40,6 +40,7 @@ async function ensureSettingsEndpoints() {
         settingsEndpoints = {
             ollama: cfg.ollama_api_endpoint || cfg.api_endpoint || '',
             openai: cfg.openai_api_endpoint || '',
+            gemini: cfg.gemini_api_endpoint || '',
         };
     } catch (err) {
         console.warn('[picker] could not load default endpoints', err);
@@ -50,6 +51,7 @@ async function ensureSettingsEndpoints() {
 
 function endpointPlaceholder(provider) {
     if (provider === 'ollama') return settingsEndpoints.ollama || 'http://localhost:11434/api/generate';
+    if (provider === 'gemini') return settingsEndpoints.gemini || 'https://generativelanguage.googleapis.com/v1beta';
     return settingsEndpoints.openai || 'https://api.openai.com/v1/chat/completions';
 }
 

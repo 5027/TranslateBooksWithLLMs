@@ -16,6 +16,30 @@ const STORAGE_VERSION = 1;
 const STORAGE_KEY_PREFIX = 'tbl_user_preferences';
 const STORAGE_KEY = `${STORAGE_KEY_PREFIX}_v${STORAGE_VERSION}`;
 
+const ENDPOINT_UI = {
+    ollama: {
+        inputId: 'apiEndpoint',
+        customizedKey: 'apiEndpointCustomized',
+        storageKey: 'lastApiEndpoint',
+        badgeId: 'apiEndpointBadge',
+        resetBtnId: 'resetApiEndpointBtn'
+    },
+    openai: {
+        inputId: 'openaiEndpoint',
+        customizedKey: 'openaiEndpointCustomized',
+        storageKey: 'lastOpenaiEndpoint',
+        badgeId: 'openaiEndpointBadge',
+        resetBtnId: 'resetOpenaiEndpointBtn'
+    },
+    gemini: {
+        inputId: 'geminiEndpoint',
+        customizedKey: 'geminiEndpointCustomized',
+        storageKey: 'lastGeminiEndpoint',
+        badgeId: 'geminiEndpointBadge',
+        resetBtnId: 'resetGeminiEndpointBtn'
+    }
+};
+
 /**
  * Validate user preferences structure
  * @param {any} data - Data to validate
@@ -142,6 +166,7 @@ export const SettingsManager = {
             { id: 'model', event: 'change' },
             { id: 'apiEndpoint', event: 'input' },
             { id: 'openaiEndpoint', event: 'input' },
+            { id: 'geminiEndpoint', event: 'input' },
             { id: 'outputFilenamePattern', event: 'input' },
             { id: 'geminiApiKey', event: 'input' },
             { id: 'openaiApiKey', event: 'input' },
@@ -297,6 +322,9 @@ export const SettingsManager = {
         if (prefs.lastOpenaiEndpoint) {
             DomHelpers.setValue('openaiEndpoint', prefs.lastOpenaiEndpoint);
         }
+        if (prefs.lastGeminiEndpoint) {
+            DomHelpers.setValue('geminiEndpoint', prefs.lastGeminiEndpoint);
+        }
 
         // Apply output filename pattern (naming convention)
         if (prefs.outputFilenamePattern) {
@@ -422,6 +450,7 @@ export const SettingsManager = {
             lastTargetLanguage: this._getLanguageValue('targetLang', 'customTargetLang'),
             lastApiEndpoint: DomHelpers.getValue('apiEndpoint'),
             lastOpenaiEndpoint: DomHelpers.getValue('openaiEndpoint'),
+            lastGeminiEndpoint: DomHelpers.getValue('geminiEndpoint'),
             outputFilenamePattern: DomHelpers.getValue('outputFilenamePattern'),
             ttsEnabled: ttsEnabledCheckbox ? ttsEnabledCheckbox.checked : false,
             textCleanup: textCleanupCheckbox ? textCleanupCheckbox.checked : false,
@@ -485,11 +514,15 @@ export const SettingsManager = {
             // Save endpoints to .env
             const ollamaEndpoint = DomHelpers.getValue('apiEndpoint');
             const openaiEndpoint = DomHelpers.getValue('openaiEndpoint');
+            const geminiEndpoint = DomHelpers.getValue('geminiEndpoint');
             if (ollamaEndpoint) {
                 envSettings['OLLAMA_API_ENDPOINT'] = ollamaEndpoint;
             }
             if (openaiEndpoint) {
                 envSettings['OPENAI_API_ENDPOINT'] = openaiEndpoint;
+            }
+            if (geminiEndpoint) {
+                envSettings['GEMINI_API_ENDPOINT'] = geminiEndpoint;
             }
 
             // Save output filename pattern (naming convention)
@@ -646,43 +679,40 @@ export const SettingsManager = {
 
     /**
      * Mark an endpoint as customized by the user
-     * @param {string} endpointType - 'ollama' or 'openai'
+     * @param {string} endpointType - 'ollama', 'openai', or 'gemini'
      */
     markEndpointCustomized(endpointType) {
-        const key = endpointType === 'openai' ? 'openaiEndpointCustomized' : 'apiEndpointCustomized';
-        this.saveLocalPreferences({ [key]: true });
+        const meta = ENDPOINT_UI[endpointType] || ENDPOINT_UI.ollama;
+        this.saveLocalPreferences({ [meta.customizedKey]: true });
         this.updateEndpointBadge(endpointType, true);
     },
 
     /**
      * Check if an endpoint was customized by the user
-     * @param {string} endpointType - 'ollama' or 'openai'
+     * @param {string} endpointType - 'ollama', 'openai', or 'gemini'
      * @returns {boolean}
      */
     isEndpointCustomized(endpointType) {
+        const meta = ENDPOINT_UI[endpointType] || ENDPOINT_UI.ollama;
         const prefs = this.getLocalPreferences();
-        return endpointType === 'openai' 
-            ? prefs.openaiEndpointCustomized 
-            : prefs.apiEndpointCustomized;
+        return !!prefs[meta.customizedKey];
     },
 
     /**
      * Reset endpoint to server default (.env value)
-     * @param {string} endpointType - 'ollama' or 'openai'
+     * @param {string} endpointType - 'ollama', 'openai', or 'gemini'
      * @param {string} serverValue - The value from server config
      */
     resetEndpointToServerDefault(endpointType, serverValue) {
-        const inputId = endpointType === 'openai' ? 'openaiEndpoint' : 'apiEndpoint';
-        const key = endpointType === 'openai' ? 'openaiEndpointCustomized' : 'apiEndpointCustomized';
-        const storageKey = endpointType === 'openai' ? 'lastOpenaiEndpoint' : 'lastApiEndpoint';
+        const meta = ENDPOINT_UI[endpointType] || ENDPOINT_UI.ollama;
         
         // Update input field
-        DomHelpers.setValue(inputId, serverValue);
+        DomHelpers.setValue(meta.inputId, serverValue);
         
         // Clear customized flag
         const prefs = this.getLocalPreferences();
-        delete prefs[key];
-        delete prefs[storageKey];
+        delete prefs[meta.customizedKey];
+        delete prefs[meta.storageKey];
         this.saveLocalPreferences(prefs);
         
         // Update badge
@@ -690,7 +720,7 @@ export const SettingsManager = {
         
         // Reload models with new endpoint
         const currentProvider = DomHelpers.getValue('llmProvider');
-        if (currentProvider === endpointType || (endpointType === 'ollama' && currentProvider === 'ollama')) {
+        if (currentProvider === endpointType) {
             window.dispatchEvent(new Event('endpointReset'));
         }
         
@@ -699,19 +729,18 @@ export const SettingsManager = {
 
     /**
      * Update the visual badge for endpoint customization
-     * @param {string} endpointType - 'ollama' or 'openai'
+     * @param {string} endpointType - 'ollama', 'openai', or 'gemini'
      * @param {boolean} isCustomized - Whether the endpoint is customized
      */
     updateEndpointBadge(endpointType, isCustomized) {
-        const badgeId = endpointType === 'openai' ? 'openaiEndpointBadge' : 'apiEndpointBadge';
-        const badge = DomHelpers.getElement(badgeId);
+        const meta = ENDPOINT_UI[endpointType] || ENDPOINT_UI.ollama;
+        const badge = DomHelpers.getElement(meta.badgeId);
         if (badge) {
             badge.style.display = isCustomized ? 'inline-block' : 'none';
         }
         
         // Also show/hide the reset button
-        const resetBtnId = endpointType === 'openai' ? 'resetOpenaiEndpointBtn' : 'resetApiEndpointBtn';
-        const resetBtn = DomHelpers.getElement(resetBtnId);
+        const resetBtn = DomHelpers.getElement(meta.resetBtnId);
         if (resetBtn) {
             resetBtn.style.display = isCustomized ? 'inline-flex' : 'none';
         }
@@ -725,21 +754,20 @@ export const SettingsManager = {
     initializeEndpointBadges(serverConfig) {
         const prefs = this.getLocalPreferences();
         
-        // Check Ollama endpoint
-        if (prefs.apiEndpointCustomized && prefs.lastApiEndpoint) {
-            const serverEndpoint = serverConfig.ollama_api_endpoint || serverConfig.api_endpoint;
-            if (prefs.lastApiEndpoint !== serverEndpoint) {
-                this.updateEndpointBadge('ollama', true);
+        const serverEndpoints = {
+            ollama: serverConfig.ollama_api_endpoint || serverConfig.api_endpoint,
+            openai: serverConfig.openai_api_endpoint,
+            gemini: serverConfig.gemini_api_endpoint
+        };
+
+        Object.entries(ENDPOINT_UI).forEach(([endpointType, meta]) => {
+            if (prefs[meta.customizedKey] && prefs[meta.storageKey]) {
+                const serverEndpoint = serverEndpoints[endpointType];
+                if (prefs[meta.storageKey] !== serverEndpoint) {
+                    this.updateEndpointBadge(endpointType, true);
+                }
             }
-        }
-        
-        // Check OpenAI endpoint
-        if (prefs.openaiEndpointCustomized && prefs.lastOpenaiEndpoint) {
-            const serverEndpoint = serverConfig.openai_api_endpoint;
-            if (prefs.lastOpenaiEndpoint !== serverEndpoint) {
-                this.updateEndpointBadge('openai', true);
-            }
-        }
+        });
     }
 };
 
