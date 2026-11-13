@@ -78,6 +78,18 @@ _SUBTITLE_FORMAT_RULES = (
 )
 
 
+def _build_name_and_language_rule(source_language: str, target_language: str) -> str:
+    """Build strict rule: keep personal names verbatim in source script, translate everything else."""
+    source_desc = f"original {source_language}" if source_language else "original source language"
+    return f"""**STRICT PERSONAL NAME & LANGUAGE RULE (MANDATORY):**
+1. **Keep ALL personal names verbatim in the {source_desc}**:
+   - First names, last names, full names, middle names, and personal nicknames MUST remain in their exact original spelling/script (e.g., do NOT translate, transliterate, or romanize people's names).
+   - If a title or honorific is attached to a person's name (e.g., "Dr. Smith", "Captain Ahab", "张老师"), **translate the title/honorific into {target_language}**, and keep ONLY the person's name in the {source_desc}.
+2. **Translate EVERYTHING ELSE into {target_language}**:
+   - All other content — including place names/locations, organizations, brands, book/work titles, historical events, named items, idioms, and all common text — MUST be translated into {target_language}.
+   - NEVER leave any non-personal-name {source_desc} words untranslated (aside from preserved placeholders)."""
+
+
 # ============================================================================
 # OPTIONAL PROMPT SECTIONS
 # ============================================================================
@@ -222,6 +234,7 @@ def generate_translation_prompt(
 
     # Build optional prompt sections based on prompt_options
     optional_sections = _build_optional_prompt_sections(prompt_options)
+    name_and_language_rule = _build_name_and_language_rule(source_language, target_language)
 
     # Build custom instructions section
     custom_instructions_section = ""
@@ -244,13 +257,18 @@ def generate_translation_prompt(
 Translate {source_language} to {target_language}. Output only the translation.
 
 **PRIORITY ORDER:**
-1. Preserve exact names
-2. Match original tone and formality
-3. Use natural {target_language} phrasing - never word-for-word
-4. Fix grammar/spelling errors in output
-5. Translate idioms to {target_language} equivalents
+1. Keep ALL personal names verbatim in the original {source_language} (never translate or transliterate personal names)
+2. Translate EVERYTHING ELSE (including places, organizations, titles, items, and all text) into {target_language}
+3. Match original tone and formality
+4. Use natural {target_language} phrasing - never word-for-word
+5. Fix grammar/spelling errors in output
+6. Translate idioms to {target_language} equivalents
+
+{name_and_language_rule}
 
 **QUALITY CHECK:**
+- Are all personal names left verbatim in {source_language}?
+- Is EVERY other word (including places, organizations, and titles) translated into {target_language}?
 - Does it sound natural to a native {target_language} speaker?
 - Are all details from the original included?
 - Does punctuation follow {target_language} conventions?
@@ -259,15 +277,16 @@ If unsure between literal and natural phrasing: **choose natural**.
 
 **LAYOUT PRESERVATION:**
 - Keep the exact text layout, spacing, line breaks, and indentation
-- **WRITE YOUR TRANSLATION IN {target_language.upper()} - THIS IS MANDATORY**
+- **WRITE YOUR TRANSLATION IN {target_language.upper()} (EXCEPT PERSONAL NAMES IN ORIGINAL {source_language.upper()}) - THIS IS MANDATORY**
 {optional_sections}
 {placeholder_section}
 
 # FINAL REMINDER: YOUR OUTPUT LANGUAGE
 
-**YOU MUST TRANSLATE INTO {target_language.upper()}.**
-Your entire translation output must be written in {target_language}.
-Do NOT write in {source_language} or any other language - ONLY {target_language.upper()}.
+**YOU MUST TRANSLATE EVERYTHING INTO {target_language.upper()}, EXCEPT PERSONAL NAMES.**
+- Personal names MUST stay verbatim in {source_language}.
+- Every other word, place name, organization, title, and sentence MUST be written in {target_language.upper()}.
+- Do NOT leave any other {source_language} text untranslated.
 
 {output_format_section}"""
 
@@ -293,7 +312,8 @@ For consistency and natural flow, here's what came immediately before:
 {main_content}
 {INPUT_TAG_OUT}
 
-REMINDER: Output ONLY your translation in this exact format:
+REMINDER: Keep personal names verbatim in {source_language}; translate EVERYTHING ELSE into {target_language}.
+Output ONLY your translation in this exact format:
 {translate_tag_in}
 your translation here
 {translate_tag_out}
@@ -321,7 +341,8 @@ def generate_ner_extraction_prompt(
     """
     Build a prompt that asks the LLM to extract recurring proper-noun entities
     (characters, locations, organizations/sects, items) from a sample of source
-    text, along with a suggested target-language translation for each.
+    text, keeping personal names verbatim in the source language and proposing a
+    target-language translation for all other categories.
 
     Output is wrapped in <NER_JSON>...</NER_JSON> with a strict schema. The
     parser is permissive (handles markdown fences, missing tags, partial JSON).
@@ -330,18 +351,21 @@ def generate_ner_extraction_prompt(
 
 # CATEGORIES (use exactly these labels)
 
-- "character"     — named persons (李凡, Li Fan, Captain Ahab)
+- "character"     — named persons ONLY (e.g., 李凡, Ahab, Jean Valjean — exclude titles/ranks)
 - "location"      — places, regions, buildings (青玄宗大殿, Mount Tai)
 - "organization"  — sects, schools, clans, factions, companies (青玄宗, Heavenly Sword Gate)
 - "item"          — named artifacts, weapons, treasures, techniques (混沌珠, Excalibur)
-- "title"         — honorifics or named ranks tied to a person (Elder, 长老, Master)
+- "title"         — honorifics or named ranks tied to a person (Elder, 长老, Master, Captain)
 - "other"         — anything else worth keeping consistent (events, magical formulas)
 
 # RULES
 
 1. Extract ONLY proper nouns or named concepts that look likely to recur. Skip generic words.
 2. Do NOT translate common nouns or descriptive phrases — only named entities.
-3. For each entity, propose ONE canonical {target_language} translation. Use the standard romanization or the most natural literary rendering. Keep the proposal concise.
+3. **CRITICAL TARGET LANGUAGE RULE**:
+   - For category `"character"` (personal names): `"target"` MUST be the EXACT original {source_language} name unchanged (same characters/spelling as `"source"`). NEVER translate, transliterate, or romanize personal names.
+   - For ALL OTHER categories (`"location"`, `"organization"`, `"item"`, `"title"`, `"other"`): `"target"` MUST be translated into natural {target_language}. Keep the translation concise.
+   - If a person appears with a title (e.g., "Captain Ahab" or "张长老"), extract the personal name as `"character"` (unchanged) and the title separately as `"title"` (translated into {target_language}).
 4. Deduplicate: if the same entity appears multiple times in the passage, list it once.
 5. If you are unsure about an entry, omit it rather than guessing.
 6. Preserve the original {source_language} form exactly as it appears in the text (no extra spaces, no normalization).
@@ -352,13 +376,13 @@ Return ONLY a JSON array wrapped between {NER_TAG_IN} and {NER_TAG_OUT}. No pros
 
 Each array element MUST be an object with these keys:
   - "source"   (string, required) — the entity in {source_language}
-  - "target"   (string, required) — the proposed {target_language} translation
+  - "target"   (string, required) — exact original {source_language} for "character"; {target_language} translation for all other categories
   - "category" (string, required) — one of the labels listed above
 
 Example:
 {NER_TAG_IN}
 [
-  {{"source": "李凡", "target": "Li Fan", "category": "character"}},
+  {{"source": "李凡", "target": "李凡", "category": "character"}},
   {{"source": "青玄宗", "target": "Qingxuan Sect", "category": "organization"}}
 ]
 {NER_TAG_OUT}
@@ -373,7 +397,7 @@ Do NOT wrap the JSON in markdown code fences. Do NOT add commentary before or af
 {text}
 {INPUT_TAG_OUT}
 
-Extract the recurring named entities now. Output the JSON array between {NER_TAG_IN} and {NER_TAG_OUT}, nothing else."""
+Extract the recurring named entities now (keep "character" names identical to source; translate all other categories to {target_language}). Output the JSON array between {NER_TAG_IN} and {NER_TAG_OUT}, nothing else."""
 
     return PromptPair(system=system_prompt.strip(), user=user_prompt.strip())
 
@@ -391,12 +415,15 @@ def generate_refinement_prompt(
     placeholder_format: Optional[Tuple[str, str]] = None,
     additional_instructions: str = "",
     glossary_block: str = "",
+    source_language: str = "",
 ) -> PromptPair:
     """
     Generate a refinement prompt to polish a draft translation.
 
     This is used for a second pass where the LLM improves a first-pass translation,
-    focusing on literary quality, natural flow, and stylistic excellence.
+    focusing on literary quality, natural flow, and stylistic excellence while
+    keeping personal names verbatim in their original language and ensuring
+    everything else is translated into target_language.
 
     Args:
         draft_translation: The first-pass translation to refine
@@ -412,6 +439,8 @@ def generate_refinement_prompt(
             e.g., ('[', ']') for [0] format or ('[[', ']]') for [[0]] format.
             If None, uses default [[0]] format
         additional_instructions: Additional refinement instructions to include in the prompt (default: "")
+        glossary_block: Optional glossary block (default: "")
+        source_language: Original source language name, if known (default: "")
 
     Returns:
         PromptPair: A named tuple with 'system' and 'user' prompts
@@ -452,6 +481,7 @@ def generate_refinement_prompt(
 
     # Build optional prompt sections
     optional_sections = _build_optional_prompt_sections(prompt_options)
+    source_desc = f"original {source_language}" if source_language else "their original source language"
 
     # Add additional instructions section if provided
     additional_instructions_section = ""
@@ -471,25 +501,29 @@ You will receive a DRAFT {target_language} translation that needs significant im
 Your job is to REWRITE it with perfect literary {target_language} style.
 
 **THE INPUT IS:**
-- A amator, literal, or awkward {target_language} translation
-- It may have unnatural phrasing, stilted expressions, or poor flow
-- Consider it a "bad" first draft that probably needs substantial reworking
+- An amateur, literal, or awkward {target_language} translation
+- It may have unnatural phrasing, stilted expressions, poor flow, or leftover untranslated non-name words
+- Personal names in the draft may intentionally be in {source_desc}
 
 **YOUR OUTPUT MUST BE:**
-- Fluent, natural {target_language} prose
+- Fluent, natural {target_language} prose for EVERY word EXCEPT personal names
+- Personal names kept verbatim in {source_desc}
 - Stylistically excellent - as if written by a skilled {target_language} author
 
 # REFINEMENT PRINCIPLES
 
 **PRIORITY ORDER:**
-1. **Natural flow** - Sentences should flow beautifully in {target_language}
-2. **Idiomatic expressions** - Use natural {target_language} idioms and phrasings
-3. **Elegant word choice** - Select the most appropriate and refined vocabulary
-4. **Rhythm and cadence** - The text should have pleasant reading rhythm
-5. **Preserve meaning** - Keep the original meaning intact while improving style
+1. **Personal names untouched** - Keep ALL personal/character names verbatim as written in {source_desc} (NEVER translate, transliterate, or localized-spell them)
+2. **Everything else in {target_language}** - If any non-name words (places, organizations, titles, common nouns, phrases) were left untranslated in the draft, translate them into {target_language}
+3. **Natural flow** - Sentences should flow beautifully in {target_language}
+4. **Idiomatic expressions** - Use natural {target_language} idioms and phrasings
+5. **Elegant word choice** - Select the most appropriate and refined vocabulary
+6. **Rhythm and cadence** - The text should have pleasant reading rhythm
+7. **Preserve meaning** - Keep the original meaning intact while improving style
 
 **WHAT TO FIX:**
 - Awkward literal translations → Natural {target_language} expressions
+- Leftover untranslated non-name words (places, organizations, titles, common terms) → Natural {target_language}
 - Repetitive or dull vocabulary → Rich, varied word choices
 - Unnatural word order → Proper {target_language} syntax
 - **Lexical repetitions and cacophony** → Use synonyms to avoid same-root word repetition
@@ -497,17 +531,16 @@ Your job is to REWRITE it with perfect literary {target_language} style.
 
 **WHAT TO PRESERVE:**
 - All factual content and meaning
-- Character names and proper nouns
-- Technical terms (if any)
+- **Personal/character names verbatim in {source_desc}** (even if they use a different script or foreign spelling — DO NOT alter or translate them)
 {optional_sections}
 {placeholder_section}
 {additional_instructions_section}
 
 # CRITICAL REMINDER
 
-You are NOT translating - you are REWRITING in {target_language.upper()}.
-The input is already in {target_language}, but poorly written.
-Your output must be polished, literary-quality {target_language}.
+- You are REWRITING into polished, literary-quality {target_language.upper()}.
+- **ONLY personal names may stay in {source_desc}** — NEVER translate or transliterate personal names.
+- **EVERYTHING ELSE** (places, organizations, titles, common text) MUST be in {target_language.upper()}.
 
 **⚠️ PLACEHOLDER PRESERVATION IS ABSOLUTELY CRITICAL:**
 If the input contains ANY placeholders (like [id0], [id1], etc.), you MUST preserve them EXACTLY.
@@ -534,7 +567,7 @@ For consistency and natural flow, here's what came immediately before:
     user_prompt = f"""{previous_context_block}{glossary_section}# DRAFT TO REFINE
 
 The following is a rough {target_language} translation that needs significant improvement.
-Rewrite it with elegant, literary-quality {target_language} prose:
+Rewrite it with elegant, literary-quality {target_language} prose (keeping personal names verbatim in {source_desc}, and ensuring everything else is in {target_language}):
 
 {INPUT_TAG_IN}
 {draft_translation}
@@ -560,12 +593,14 @@ def generate_subtitle_refinement_block_prompt(
     translate_tag_out: str = TRANSLATE_TAG_OUT,
     additional_instructions: str = "",
     glossary_block: str = "",
+    source_language: str = "",
 ) -> PromptPair:
     """
     Generate a refinement prompt for multiple subtitles in a single LLM call.
 
     Mirrors generate_subtitle_block_prompt but rewrites each draft subtitle into
-    polished target-language prose while preserving the [index] markers.
+    polished target-language prose while preserving the [index] markers and
+    keeping personal names verbatim in the original source language.
 
     Args:
         subtitle_blocks: List of tuples (local_index, draft_translated_text)
@@ -575,6 +610,7 @@ def generate_subtitle_refinement_block_prompt(
         translate_tag_out: Closing tag for refinement output
         additional_instructions: Extra refinement guidance
         glossary_block: Optional glossary block
+        source_language: Original source language name, if known (default: "")
 
     Returns:
         PromptPair: A named tuple with 'system' and 'user' prompts
@@ -590,6 +626,8 @@ def generate_subtitle_refinement_block_prompt(
         example_format=subtitle_example_format,
     )
 
+    source_desc = f"original {source_language}" if source_language else "their original source language"
+
     additional_instructions_section = ""
     if additional_instructions and additional_instructions.strip():
         additional_instructions_section = f"""
@@ -604,7 +642,8 @@ def generate_subtitle_refinement_block_prompt(
 
 You will receive a block of DRAFT {target_language} subtitles, each prefixed with an [index] marker.
 Your job is to REWRITE each subtitle with natural, idiomatic {target_language} dialogue while
-preserving the index markers and the one-subtitle-per-marker structure.
+preserving the index markers, keeping personal names verbatim in {source_desc}, and ensuring
+all other words are in {target_language}.
 
 **THE INPUT IS:**
 - A block of draft {target_language} subtitles, possibly literal or awkward
@@ -612,34 +651,36 @@ preserving the index markers and the one-subtitle-per-marker structure.
 
 **YOUR OUTPUT MUST BE:**
 - The same number of subtitles, each prefixed with the SAME [N] marker
-- Fluent, natural spoken {target_language} suited to subtitling
+- Fluent, natural spoken {target_language} suited to subtitling (with personal names untouched in {source_desc})
 
 # REFINEMENT PRINCIPLES
 
 **PRIORITY ORDER:**
-1. **Natural dialogue** - sound like real {target_language} speech, not translation
-2. **Reading speed** - keep subtitle length viewer-friendly
-3. **Continuity** - terminology and tone consistent across the block
-4. **Preserve meaning** - keep the original meaning intact while improving style
+1. **Personal names untouched** - Keep ALL personal/character names verbatim in {source_desc} (never translate or transliterate them)
+2. **Everything else in {target_language}** - Translate any leftover untranslated places, organizations, titles, or common words into {target_language}
+3. **Natural dialogue** - sound like real {target_language} speech, not translation
+4. **Reading speed** - keep subtitle length viewer-friendly
+5. **Continuity** - terminology and tone consistent across the block
+6. **Preserve meaning** - keep the original meaning intact while improving style
 
 **WHAT TO FIX:**
 - Awkward literal phrasing -> natural {target_language} expressions
+- Leftover untranslated non-name words -> natural {target_language}
 - Repetitive vocabulary that is clearly an artefact of literal translation -> varied word choices
 - Unnatural word order -> proper {target_language} syntax
 
 **WHAT TO PRESERVE:**
 - The [index] markers exactly as given
 - All factual content and meaning
-- Character names and proper nouns
+- **Personal/character names verbatim in {source_desc}** (DO NOT translate or transliterate them)
 - The one-subtitle-per-[index] structure (no merging, no splitting)
 - Intentional repetitions (e.g. "No. No. No.") and dialogue dashes ("- ...\\n- ...") when present in the draft
 - Inline formatting tags and any \\n line breaks inside a subtitle{additional_instructions_section}
 
 # CRITICAL REMINDERS
 
-You are NOT translating - you are REWRITING in {target_language.upper()}.
-The input is already in {target_language}, but possibly poorly written.
-Your output must be polished, natural {target_language} dialogue.
+- You are REWRITING into polished, natural {target_language.upper()} dialogue.
+- **ONLY personal names stay in {source_desc}**; EVERYTHING ELSE MUST be in {target_language.upper()}.
 
 **Index markers are MANDATORY:** every input [N] must appear exactly once in the output,
 in the same order, followed by the refined text for that subtitle.
@@ -667,7 +708,8 @@ For continuity and consistency, here's the previous refined block:
 {formatted_subtitles_text}
 {INPUT_TAG_OUT}
 
-REMINDER: Output format must be:
+REMINDER: Keep personal names verbatim in {source_desc}; ensure EVERYTHING ELSE is in {target_language}.
+Output format must be:
 {translate_tag_in}
 [0]refined subtitle 0
 [1]refined subtitle 1
@@ -717,6 +759,8 @@ def generate_subtitle_block_prompt(
         example_format=subtitle_example_format
     )
 
+    name_and_language_rule = _build_name_and_language_rule(source_language, target_language)
+
     # Build custom instructions section if provided
     custom_instructions_section = ""
     if custom_instructions and custom_instructions.strip():
@@ -734,22 +778,25 @@ def generate_subtitle_block_prompt(
     # SYSTEM PROMPT - Role and instructions for subtitle translation
     system_prompt = f"""You are a professional {target_language} subtitle translator and dialogue adaptation specialist.
 
-# CRITICAL: TARGET LANGUAGE IS {target_language.upper()}
+# CRITICAL: TARGET LANGUAGE IS {target_language.upper()} (KEEP PERSONAL NAMES IN {source_language.upper()})
 
-**YOUR SUBTITLE TRANSLATION MUST BE WRITTEN ENTIRELY IN {target_language.upper()}.**
+**EVERYTHING MUST BE WRITTEN IN {target_language.upper()}, EXCEPT PERSONAL NAMES.**
 
 You are translating subtitles FROM {source_language} TO {target_language}.
-Your output must be in {target_language} ONLY - do NOT use any other language.
+All personal names must remain verbatim in {source_language}; everything else (places, organizations, titles, dialogue) must be translated into {target_language}.
+
+{name_and_language_rule}
 
 # SUBTITLE TRANSLATION PRINCIPLES
 
 **Quality Standards:**
-- Translate dialogues naturally and conversationally for {target_language} viewers
+- Keep ALL personal/character names verbatim in the original {source_language} (never translate or transliterate them)
+- Translate ALL other words, place names, organizations, titles, and dialogue naturally into {target_language}
 - Adapt expressions, slang, and cultural references appropriately
 - Keep subtitle length readable (typically 40-42 characters per line)
 - Restructure sentences naturally (avoid word-by-word translation)
 - Maintain speaker's tone, personality, and emotion
-- **WRITE YOUR TRANSLATION IN {target_language.upper()} - THIS IS MANDATORY**
+- **WRITE YOUR TRANSLATION IN {target_language.upper()} (EXCEPT PERSONAL NAMES IN {source_language.upper()}) - THIS IS MANDATORY**
 
 **Subtitle-Specific Rules:**
 - Prioritize clarity and reading speed over literal accuracy
@@ -760,9 +807,9 @@ Your output must be in {target_language} ONLY - do NOT use any other language.
 
 # FINAL REMINDER: YOUR OUTPUT LANGUAGE
 
-**YOU MUST TRANSLATE INTO {target_language.upper()}.**
-Your entire subtitle translation must be written in {target_language}.
-Do NOT write in {source_language} or any other language - ONLY {target_language.upper()}.
+**YOU MUST TRANSLATE EVERYTHING INTO {target_language.upper()}, EXCEPT PERSONAL NAMES.**
+- Personal names MUST remain verbatim in {source_language}.
+- Do NOT leave any other {source_language} words untranslated (translate all places, organizations, titles, and dialogue into {target_language.upper()}).
 
 {subtitle_output_format_section}"""
 
@@ -792,7 +839,8 @@ For continuity and consistency, here's the previous subtitle block:
 {formatted_subtitles_text}
 {INPUT_TAG_OUT}
 
-REMINDER: Output format must be:
+REMINDER: Keep personal names verbatim in {source_language}; translate EVERYTHING ELSE into {target_language}.
+Output format must be:
 {translate_tag_in}
 [1]translated subtitle 1
 [2]translated subtitle 2
@@ -954,6 +1002,7 @@ def generate_post_processing_prompt(
     prompt_options: dict = None,
     placeholder_format: Optional[Tuple[str, str]] = None,
     glossary_block: str = "",
+    source_language: str = "",
 ) -> PromptPair:
     """
     Alias for generate_refinement_prompt with parameter name mapping.
@@ -970,6 +1019,8 @@ def generate_post_processing_prompt(
         has_placeholders: If True, includes placeholder preservation instructions
         prompt_options: Optional dict with prompt customization options
         placeholder_format: Optional tuple of (prefix, suffix) for placeholders
+        glossary_block: Optional glossary block
+        source_language: Original source language name, if known
 
     Returns:
         PromptPair: A named tuple with 'system' and 'user' prompts
@@ -985,4 +1036,5 @@ def generate_post_processing_prompt(
         placeholder_format=placeholder_format,
         additional_instructions=additional_instructions,
         glossary_block=glossary_block,
+        source_language=source_language,
     )
